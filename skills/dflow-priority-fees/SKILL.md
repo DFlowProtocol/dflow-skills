@@ -1,0 +1,4 @@
+---
+name: dflow-priority-fees
+description: Configure Solana priority fees and intent fee budgets for DFlow trades so transactions land reliably under congestion. Use when the user asks about transaction speed, "my swap is failing / not landing", `prioritizationFeeLamports`, `prioritizationFeeMaxLamports`, `computeUnitPriceMicroLamports`, `dynamicComputeUnitLimit`, the auto / medium / high / veryHigh / disabled presets, the `feeBudget` and `maxAutoFeeBudget` for declarative `/intent` swaps, or wants to subscribe to the priority-fees WebSocket stream (`/priority-fees/stream`). Do NOT use for builder/platform fees taken out of trade output (use `dflow-platform-fees`), for paying gas on the user's behalf (use `dflow-sponsored-swaps`), or for Kalshi prediction-market trading fees (use `dflow-kalshi-trading` and `dflow-platform-fees`).
+---
