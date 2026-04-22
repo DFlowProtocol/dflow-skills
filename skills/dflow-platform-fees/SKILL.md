@@ -1,6 +1,6 @@
 ---
 name: dflow-platform-fees
-description: Monetize a DFlow integration by collecting a builder-defined fee on trades your app routes through the Trade API — either a fixed percentage (spot + PM) via `platformFeeBps`, or a probability-weighted dynamic fee (PM outcome tokens only) via `platformFeeScale`. Use when the user asks "how do I take a cut of trades?", "add a builder fee", "monetize my swap UI", "charge a platform fee", "how does platformFeeBps / platformFeeScale work?", or "where do my fees get paid?". Do NOT use to run a trade itself (use `dflow-spot-trading` or `dflow-kalshi-trading`), to tune Solana priority fees (use `dflow-priority-fees`), or to sponsor user gas (use `dflow-sponsored-swaps`).
+description: Monetize a DFlow integration by collecting a builder-defined fee on trades your app routes through the Trade API — either a fixed percentage (spot + PM) via `platformFeeBps`, or a probability-weighted dynamic fee (PM outcome tokens only) via `platformFeeScale`. Use when the user asks "how do I take a cut of trades?", "add a builder fee", "monetize my swap UI", "charge a platform fee", "how does platformFeeBps / platformFeeScale work?", or "where do my fees get paid?". Do NOT use to run a trade itself (use `dflow-spot-trading` or `dflow-kalshi-trading` — both also cover priority fees and sponsored / gasless flows).
 ---
 
 # DFlow Platform Fees
@@ -26,8 +26,6 @@ Flat percentage of the trade in basis points (1 bps = 0.01%). `platformFeeBps: 5
 
 ### Dynamic — `platformFeeScale` (PM outcome tokens only)
 
-> **[TBD — Luke to verify with DFlow team]** This skill currently describes `platformFeeScale` as PM-only because the `/order` openapi scopes it to "native prediction market swaps and async prediction market swaps," and the param is absent from the spot-only `/quote` endpoint. If dynamic fees are also intended to work on spot, this section (and the "Dynamic fees are not available on spot" line below + the `platformFeeScale` gotcha) needs a revision.
-
 Probability-weighted fee that scales with market uncertainty:
 
 ```
@@ -35,7 +33,7 @@ fee = k * p * (1 - p) * c
 ```
 
 - `k` = `platformFeeScale`, 3-decimal precision (`platformFeeScale: 50` → k = 0.050).
-- `p` = all-in outcome-token price, 0–1 (the market-implied probability at execution).
+- `p` = the all-in price (includes all fees + filled price), 0–1.
 - `c` = contract size.
 - Paid in the **settlement mint** (USDC or CASH).
 
@@ -87,9 +85,9 @@ For PM: the fee ATA must be a settlement-mint ATA (USDC or CASH), since that's t
 
 ## Gotchas (the docs MCP won't volunteer these)
 
-- **Don't set `platformFeeBps` if you're not collecting.** The API factors a declared fee into slippage tolerance; if the fee isn't actually taken onchain, the slippage budget gets "spent" on nothing and user pricing worsens. Only pass a nonzero value when there's a real `feeAccount` at the other end. Confirmed in the DFlow FAQ.
+- **Don't set `platformFeeBps` if you're not collecting.** The API factors a declared fee into slippage tolerance; if the fee isn't actually taken onchain, the slippage budget gets "spent" on nothing and user pricing worsens. Only pass a nonzero value when there's a real `feeAccount` at the other end.
 - **Redemption is fee-exempt under dynamic fees.** `platformFeeScale` returns 0 at `p = 1`. There's no "take a cut on redemption" knob.
-- **Dynamic fees don't work on spot.** `platformFeeScale` is a no-op for non-outcome-token trades. Use `platformFeeBps` for spot.
+- **Dynamic fees are outcome-token trades only.** `platformFeeScale` is not supported on spot. Use `platformFeeBps` there.
 - **Declarative spot fees can only be in `outputMint`.** Imperative has both modes; declarative narrows. Easy regression.
 - **PM fees are always in the settlement mint.** Passing `platformFeeMode: "inputMint"` on a PM buy doesn't mean "collect in USDC because USDC is the input" — it's silently invalid. The fee settles in USDC/CASH regardless because that's the settlement mint.
 - **`feeAccount` must exist before the trade.** DFlow doesn't create it for you. If it's missing, the trade fails.
@@ -101,9 +99,9 @@ For PM: the fee ATA must be a settlement-mint ATA (USDC or CASH), since that's t
 Two different things that both use the word "fee":
 
 - **Platform fees** (this skill) — builder→user. Defined by the builder via `/order` params, transferred to the builder's `feeAccount` on success. Applies to any trade type.
-- **DFlow PM trading fees + rebates** — DFlow→builder. Charged on **prediction-market outcome-token trades only**, tiered by rolling 30-day PM volume, with a VIP rebate schedule for large-volume builders. Details: [`/build/prediction-markets/prediction-market-fees`](https://pond.dflow.net/build/prediction-markets/prediction-market-fees).
+- **DFlow PM trading fees + rebates** — builder→DFlow, with a partial VIP rebate flow back from DFlow→builder. Charged on **prediction-market outcome-token trades only** (formula `roundup(0.07 × c × p × (1 − p)) + (0.01 × c × p × (1 − p))`), tiered by rolling 30-day PM volume (Frost / Glacier / Steel / Obsidian). Builders above $100k/30D volume may additionally qualify for the VIP rebate schedule. Details: [`/build/prediction-markets/prediction-market-fees`](https://pond.dflow.net/build/prediction-markets/prediction-market-fees).
 
-Don't mix them up when calculating net economics. Platform fees on a spot trade are just a line item between user and builder.
+Don't mix them up when calculating net economics. Platform fees on a spot trade are just a line item between user and builder — DFlow isn't in that loop.
 
 ## When something doesn't fit
 
@@ -111,7 +109,5 @@ Defer to the docs MCP for exact parameter encoding, the code recipe at [`/build/
 
 ## Sibling skills
 
-- `dflow-spot-trading` — build the base spot `/order` call; layer these params on top.
-- `dflow-kalshi-trading` — build the base PM `/order` call; layer these params on top.
-- `dflow-priority-fees` — separate Solana-network fee concern.
-- `dflow-sponsored-swaps` — let a sponsor pay the user's gas; composable with platform fees.
+- `dflow-spot-trading` — build the base spot `/order` call; layer these params on top. Also covers priority fees and sponsored / gasless flows.
+- `dflow-kalshi-trading` — build the base PM `/order` call; layer these params on top. Also covers priority fees and sponsored / gasless flows (including `predictionMarketInitPayer`).

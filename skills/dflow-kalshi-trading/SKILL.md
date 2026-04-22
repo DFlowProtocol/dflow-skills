@@ -1,6 +1,6 @@
 ---
 name: dflow-kalshi-trading
-description: Buy, sell, or redeem YES/NO outcome tokens on Kalshi prediction markets via DFlow. Use when the user wants to bet on an event, place a Kalshi order, take a YES or NO position, exit a Kalshi position, or redeem winning outcome tokens after a market resolves. Covers both the `dflow` CLI and the DFlow Trading API. Do NOT use to discover markets, view positions, stream prices, complete Proof KYC, or for non-Kalshi spot swaps.
+description: Buy, sell, or redeem YES/NO outcome tokens on Kalshi prediction markets via DFlow. Use when the user wants to bet on an event, place a Kalshi order, take a YES or NO position, exit a Kalshi position, redeem winning outcome tokens after a market resolves, tune priority fees on a PM trade, or build a gasless / sponsored PM flow where the app pays tx / ATA / market-init costs. Covers both the `dflow` CLI and the DFlow Trading API. Do NOT use to discover markets, view positions, stream prices, complete Proof KYC, or for non-Kalshi spot swaps.
 ---
 
 # DFlow Kalshi Trading
@@ -52,12 +52,19 @@ Once the market is `determined` / `finalized` **and** `redemptionStatus: "open"`
 3. **Settlement mint** — USDC or CASH (these are the only two).
 4. **Amount in atomic units** — every Kalshi mint is **6 decimals** (`8_000_000` = $8 of USDC; `10_000_000` = 10 outcome tokens). Buys submit settlement-mint amounts (USDC/CASH); sells/redeems submit outcome-token amounts.
 5. **API only** — wallet pubkey (base58), and whether they have a DFlow API key. Yes → prod host `https://quote-api.dflow.net` with `x-api-key` header. No → dev host `https://dev-quote-api.dflow.net`, no header (same features, only rate limits differ). Point them at `https://pond.dflow.net/build/api-key` for a real key.
+6. **Priority fee (both surfaces)** — "Any priority-fee preference, or just use DFlow's default?" Default on both surfaces = DFlow-auto, capped at 0.005 SOL, which is fine for ~99% of PM trades. Surface this explicitly so the user knows the lever exists for congested periods or cost-sensitive flows.
+   - **API** — pass `prioritizationFeeLamports` on `/order`: `auto` | `medium` | `high` | `veryHigh` | `disabled` | integer lamports. Live estimates for tuning: `GET /priority-fees` (snapshot), `/priority-fees/stream` (WebSocket). (`/intent` doesn't apply to Kalshi — PM is imperative-only.)
+   - **CLI** — no tuning flag; `dflow trade` always uses the server-side default. If the user needs finer control (an exact lamport value, or `disabled`), they'll have to drop to the API.
+7. **Sponsored / gasless (API only — skip for CLI)** — "Does the user need to hold SOL for this trade, or is your app covering fees?" Default = user pays everything. Two levers on `/order`, depending on what you want to cover:
+   - `sponsor=<sponsor-wallet-base58>` — sponsor pays tx fee + ATA creation + market-init. Tx must be co-signed by both user and sponsor. Optional `sponsorExec=true|false` picks sponsor-executes (default) vs. user-executes.
+   - `predictionMarketInitPayer=<wallet>` — covers *only* the one-time market-init rent; user still signs and pays their own tx fee and ATA creation. Useful when you only want to eat the init cost. Markets can also be pre-initialized out-of-band via `GET /prediction-market-init`.
+   - The CLI doesn't support either sponsorship lever.
 
 **Do NOT ask about:**
 
 - **RPC** — CLI users set it during `dflow setup`. API users on a browser wallet never need their own RPC (the wallet handles it). Only ask if signing server-side. When one is needed, suggest [Helius](https://helius.dev).
 - **Slippage** — both surfaces default to `"auto"`, which is right for CLP-sourced fills. Override only on explicit user request (`--slippage` CLI; `predictionMarketSlippageBps` API).
-- **Priority fee, platform fee, sponsorship, market init** — defaults are fine. Defer to the matching sibling skill if the user pivots there.
+- **Platform fee** — defer to `dflow-platform-fees` if the user pivots there.
 
 ## Gotchas (the docs MCP won't volunteer these)
 
@@ -87,6 +94,4 @@ Defer if the user pivots to:
 - `dflow-kalshi-portfolio` — view positions, unrealized P&L
 - `dflow-proof-kyc` — set up Proof verification on a wallet
 - `dflow-platform-fees` — charge a builder fee on PM trades
-- `dflow-priority-fees` — tune Solana priority fees
-- `dflow-sponsored-swaps` — gasless / sponsored flows
 - `dflow-spot-trading` — non-Kalshi token swaps

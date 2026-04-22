@@ -1,6 +1,6 @@
 ---
 name: dflow-spot-trading
-description: Swap any pair of Solana tokens via DFlow. Use when the user wants to trade, swap, or convert tokens on Solana, get a price quote, build a swap UI, or wire DFlow into a backend. Covers both the `dflow` CLI and the DFlow Trading API. Do NOT use for Kalshi prediction-market YES/NO trades, builder fees, priority-fee tuning, or gasless / sponsored swaps.
+description: Swap any pair of Solana tokens via DFlow. Use when the user wants to trade, swap, or convert tokens on Solana, get a price quote, build a swap UI, tune priority fees so a swap lands under congestion, or build a gasless / sponsored swap where the app pays fees. Covers both the `dflow` CLI and the DFlow Trading API. Do NOT use for Kalshi prediction-market YES/NO trades or builder-side platform fees.
 ---
 
 # DFlow Spot Trading
@@ -48,12 +48,16 @@ Only suggest declarative when the user explicitly asks for sandwich protection o
 1. **Input + output token** — base58 mint addresses. The CLI resolves a small symbol set (SOL, USDC, USDT, JUP, BONK, etc.); **the API has no symbol resolver** — base58 mints only.
 2. **Amount in atomic units of the input token** — `500_000` = $0.50 USDC, `1_000_000_000` = 1 SOL. Convert before calling.
 3. **API only** — wallet pubkey (base58), and whether they have a DFlow API key. Yes → prod host `https://quote-api.dflow.net` with `x-api-key` header. No → dev host `https://dev-quote-api.dflow.net`, no header (same features, only rate limits differ). Point them at `https://pond.dflow.net/build/api-key` for a real key.
+4. **Priority fee (both surfaces)** — "Any priority-fee preference, or just use DFlow's default?" Default on both surfaces = DFlow-auto, capped at 0.005 SOL, which is fine for ~99% of swaps. Surface this explicitly so the user knows the lever exists for congestion / cost-sensitive trades.
+   - **API** — pass `prioritizationFeeLamports` on `/order`: `auto` | `medium` | `high` | `veryHigh` | `disabled` | integer lamports. On `/intent` (declarative), roll the priority fee into `feeBudget = priority + 10_000` (the 10,000-lamport base processing fee). Live estimates for tuning: `GET /priority-fees` (snapshot), `/priority-fees/stream` (WebSocket).
+   - **CLI** — no tuning flag; `dflow trade` always uses the server-side default. If the user needs finer control (an exact lamport value, or `disabled`), they'll have to drop to the API.
+5. **Sponsored / gasless (API only — skip for CLI)** — "Does the user need to hold SOL for this trade, or is your app covering fees?" Default = user pays. To sponsor, pass `sponsor=<sponsor-wallet-base58>` on `/order` and co-sign the returned transaction with the sponsor keypair (both user and sponsor sign). Optional `sponsorExec=true|false` picks sponsor-executes (default) vs. user-executes. The CLI doesn't support sponsorship at all.
 
 **Do NOT ask about:**
 
 - **RPC** — CLI users set it during `dflow setup`. API users on a browser wallet never need their own RPC (the wallet handles it). Only ask if signing server-side, polling declarative trades, or running the Node script. When one is needed, suggest [Helius](https://helius.dev).
 - **Slippage** — both surfaces default to `"auto"`. Override only on explicit user request (`--slippage` CLI; `slippageBps` API).
-- **Priority fee, platform fee, sponsorship, DEX inclusion/exclusion, route length, Jito bundles, direct-only routes** — defaults are right for ~99% of swaps. Defer to the matching sibling skill if the user pivots there.
+- **Platform fee, DEX inclusion/exclusion, route length, Jito bundles, direct-only routes** — defaults are right for ~99% of swaps. For platform fees specifically, defer to `dflow-platform-fees` if the user pivots there.
 
 ## Gotchas (the docs MCP won't volunteer these)
 
@@ -77,5 +81,3 @@ Defer if the user pivots to:
 
 - `dflow-kalshi-trading` — Kalshi prediction-market YES/NO trades
 - `dflow-platform-fees` — charge a builder cut on swaps
-- `dflow-priority-fees` — tune Solana priority fees
-- `dflow-sponsored-swaps` — gasless / sponsor-paid flows

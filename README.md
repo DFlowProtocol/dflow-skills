@@ -14,9 +14,7 @@ Each skill is a focused recipe — a single `SKILL.md` that captures the workflo
 | [`dflow-kalshi-market-data`](skills/dflow-kalshi-market-data) | Real-time orderbook, trade, and live-data streams for Kalshi markets. |
 | [`dflow-kalshi-portfolio`](skills/dflow-kalshi-portfolio) | View open positions, unrealized P&L, and reclaim rent from empty outcome accounts. |
 | [`dflow-proof-kyc`](skills/dflow-proof-kyc) | Integrate Proof identity verification so wallets can buy on Kalshi. |
-| [`dflow-priority-fees`](skills/dflow-priority-fees) | Tune Solana priority fees so DFlow trades land under congestion. |
 | [`dflow-platform-fees`](skills/dflow-platform-fees) | Take a builder cut on swaps and PM trades (`platformFeeBps`, `platformFeeScale`). |
-| [`dflow-sponsored-swaps`](skills/dflow-sponsored-swaps) | Build gasless flows where the app pays tx / ATA / market-init costs. |
 
 ## Recommended: install the DFlow docs MCP
 
@@ -75,13 +73,43 @@ dflow setup
 
 ## Installing these skills
 
-These are filesystem-distributed skills. To use them:
+Pick the pattern that matches your host. We recommend **symlinking** (not copying) — that way `git pull` on the repo updates every installed skill in place.
 
-1. Clone this repo somewhere your Claude host can read it.
-2. Copy or symlink the `skills/<skill-name>` folder(s) you want into your host's skills directory:
-   - **Claude Code**: `~/.claude/skills/`
-   - **Cursor**: `~/.cursor/skills/` (or workspace-local `.cursor/skills/`)
-3. Restart the host so it picks up the new skill.
+### Claude Code (personal) — all skills
+
+```bash
+git clone https://github.com/DFlowProtocol/dflow-skills.git
+mkdir -p ~/.claude/skills
+ln -s "$(pwd)"/dflow-skills/skills/* ~/.claude/skills/
+```
+
+### Claude Code (personal) — one skill
+
+```bash
+git clone https://github.com/DFlowProtocol/dflow-skills.git
+mkdir -p ~/.claude/skills
+ln -s "$(pwd)/dflow-skills/skills/dflow-kalshi-trading" ~/.claude/skills/
+```
+
+Swap `dflow-kalshi-trading` for any skill folder under `skills/`.
+
+### Claude Code (project-scoped)
+
+Same commands, but target `.claude/skills/` in your project root instead of `~/.claude/skills/`. Commits alongside your project; only that project sees the skills.
+
+### Cursor
+
+Same commands, target `~/.cursor/skills/` (personal) or `.cursor/skills/` (workspace-scoped).
+
+### Claude.ai (web)
+
+1. Clone or download this repo.
+2. Zip the `skills/<skill-name>/` folder you want (one zip per skill).
+3. Claude.ai → **Settings → Capabilities → Skills → Upload skill**.
+
+### Prefer `cp -r` over `ln -s`?
+
+Fine — substitute `cp -r` for `ln -s` in any of the commands above. You just won't auto-pick-up updates; you'll need to re-copy after `git pull`.
 
 ## Repo layout
 
