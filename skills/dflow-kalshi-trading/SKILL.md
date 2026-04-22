@@ -21,7 +21,15 @@ If unclear, ask once: *"From the command line, or wired into an app?"*
 
 ## Workflows
 
-All three workflows assume the user already has a **market mint** (CLI) or **outcome mint** (API) in hand. If they only have a ticker / event name, defer to `dflow-kalshi-market-scanner`.
+All three workflows assume the user already has a **market ledger mint** (CLI; the `marketLedger` field on the Metadata API market object) or an **outcome mint** (API; `yesMint` / `noMint`) in hand. If they only have a ticker / event name, defer to `dflow-kalshi-market-scanner`.
+
+**One market, two settlement rails.** Every initialized Kalshi market on DFlow exposes **both** a USDC rail and a CASH rail in `market.accounts` — each with its own `marketLedger`, `yesMint`, and `noMint`. They share an orderbook (the top-level `yesBid` / `yesAsk` / `volume24hFp` are market-wide), but trades and holdings are rail-scoped: USDC-rail YES tokens are a different SPL mint from CASH-rail YES tokens and aren't fungible. **Default to the USDC rail** unless the user holds CASH, explicitly asks for CASH, or the active DFlow vault only has CASH. Don't write defensive "fall back to CASH if USDC rail missing" code — it never fires, and it hides the rail choice from the user. State the default at the top of the script instead.
+
+**Settlement mint constants** (Solana, Token-2022 for CASH and the classic SPL token program for USDC):
+- USDC: `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`
+- CASH: `CASHx9KJUStyftLFWGvEVf59SGeG9sh5FfcnZMVPCASH`
+
+Use these as the keys into `market.accounts[mint]` when picking a rail. There is **no top-level `market.settlementMint` field** on the `/markets` response (despite what some recipe snippets might suggest with `market.accounts?.[market.settlementMint]` — that pattern shows up in *position-side* code, where the rail is already known from the held outcome mint, not in market-discovery code). Key by the mint directly.
 
 ### Buy (open or increase a YES/NO position)
 
@@ -29,8 +37,10 @@ All three workflows assume the user already has a **market mint** (CLI) or **out
 2. Submit the order with the **settlement mint as input** (USDC or CASH) and the **outcome mint as output**.
 3. Poll status until terminal (`closed` / `expired` / `failed`).
 
-- CLI: `dflow trade <atomic-amount> USDC --market <market-mint> --side yes|no` — auto-polls for up to 120s.
-- API: `GET /order?userPublicKey=&inputMint=<settlement>&outputMint=<outcome>&amount=<atomic>`, then sign + submit + poll `/order-status`. Field details via the docs MCP.
+- CLI: `dflow trade <atomic-amount> USDC --market <marketLedger> --side yes|no` — auto-polls for up to 120s. `<FROM>` accepts either the base58 mint or the shorthand `USDC` / `CASH` (CLI resolves a small symbol set, same as spot). `--market` takes the `marketLedger` for the settlement track matching the `<from>` arg — i.e. `market.accounts[<USDC-or-CASH-mint>].marketLedger` on the Metadata API response. The CLI derives the YES/NO outcome mint from `--side` + `<from>`, so **the same `marketLedger` value is used for both `--side yes` and `--side no`**. Don't pass a `yesMint` / `noMint` here — those are inputs to the API surface, not the CLI. The docs' "market mint" and "market ledger mint" phrasing both refer to this one field.
+
+**"Buy N whole contracts" from a scan snapshot.** Kalshi buys submit a USDC amount and get back as many whole contracts as it covers, refunding leftovers. When you're executing N contracts off a snapshotted `yesAsk`, compute `Math.ceil(N * yesAsk * 1e6)` atomic USDC and optionally add a small buffer (≤ ~1%, a few basis points is typically enough) so a tick-up in the ask between scan and submit doesn't leave you with N-1. Leftover stablecoin is refunded by the CLP, so over-funding slightly is cheap insurance. Don't over-fund by more than a percent or two — at some point it's no longer insurance, it's a different order size.
+- API: `GET /order?userPublicKey=&inputMint=<settlement>&outputMint=<yesMint|noMint>&amount=<atomic>`, then sign + submit + poll `/order-status`. The API takes the outcome mint directly (no `--market` indirection). Field details via the docs MCP.
 
 ### Sell (decrease or close)
 
@@ -45,17 +55,21 @@ Once the market is `determined` / `finalized` **and** `redemptionStatus: "open"`
 
 ## What to ASK the user (and what NOT to ask)
 
-**Ask if missing:**
+**Trade shape — infer if unambiguous, confirm if not:**
 
 1. **Operation** — buy / sell / redeem. Infer from intent ("bet on X" → buy YES; "cash out" → sell; "my YES tokens just won" → redeem). Don't make the user pick a mode.
-2. **Market + side** — market mint for CLI, outcome mint for API.
-3. **Settlement mint** — USDC or CASH (these are the only two).
+2. **Market + side** — for CLI: the `marketLedger` (from `market.accounts[<settlement-mint>].marketLedger`) plus `--side yes|no`. For API: the YES or NO outcome mint directly as `outputMint`.
+3. **Settlement rail** — USDC or CASH. Both exist on every initialized market; default to USDC unless the user says otherwise. This determines which `marketLedger` (CLI) or `yesMint` / `noMint` (API) you use.
 4. **Amount in atomic units** — every Kalshi mint is **6 decimals** (`8_000_000` = $8 of USDC; `10_000_000` = 10 outcome tokens). Buys submit settlement-mint amounts (USDC/CASH); sells/redeems submit outcome-token amounts.
-5. **API only** — wallet pubkey (base58), and whether they have a DFlow API key. Yes → prod host `https://quote-api.dflow.net` with `x-api-key` header. No → dev host `https://dev-quote-api.dflow.net`, no header (same features, only rate limits differ). Point them at `https://pond.dflow.net/build/api-key` for a real key.
-6. **Priority fee (both surfaces)** — "Any priority-fee preference, or just use DFlow's default?" Default on both surfaces = DFlow-auto, capped at 0.005 SOL, which is fine for ~99% of PM trades. Surface this explicitly so the user knows the lever exists for congested periods or cost-sensitive flows.
+
+**Infra — always ask, never infer:**
+
+5. **API only — wallet pubkey** (base58). Required for every `/order` call.
+6. **API only — DFlow API key** (only when the script is making direct HTTP calls to `/order` or other Trade API endpoints; pure CLI scripts don't need one — see the "two auth paths" gotcha). **Ask with a clean, neutral question: *"Do you have a DFlow API key?"*** Don't presuppose where the key lives — phrasings like *"do you have it in env?"* or *"is `DFLOW_API_KEY` set?"* nudge the user toward env-var defaults they didn't ask for. Surface the choice; don't silently fall back to env or to dev. It's **one key for everything DFlow** — same `x-api-key` unlocks the Trade API *and* the Metadata API, REST *and* WebSocket. If yes → prod host `https://quote-api.dflow.net` with `x-api-key` on every request. If no → dev host `https://dev-quote-api.dflow.net` (same features, rate-limited). Point them at `https://pond.dflow.net/build/api-key` for a prod key. **When you generate a script that does its own HTTP, log the resolved host + key-presence at startup** so the user can see which rails they're on.
+7. **Priority fee (both surfaces)** — "Any priority-fee preference, or just use DFlow's default?" Default on both surfaces = DFlow-auto, capped at 0.005 SOL (documented default on `/order`). Surface this explicitly so the user knows the lever exists for congested periods or cost-sensitive flows. Don't editorialize about what percentage of trades this covers — DFlow doesn't publish one and you don't know.
    - **API** — pass `prioritizationFeeLamports` on `/order`: `auto` | `medium` | `high` | `veryHigh` | `disabled` | integer lamports. Live estimates for tuning: `GET /priority-fees` (snapshot), `/priority-fees/stream` (WebSocket). (`/intent` doesn't apply to Kalshi — PM is imperative-only.)
    - **CLI** — no tuning flag; `dflow trade` always uses the server-side default. If the user needs finer control (an exact lamport value, or `disabled`), they'll have to drop to the API.
-7. **Sponsored / gasless (API only — skip for CLI)** — "Does the user need to hold SOL for this trade, or is your app covering fees?" Default = user pays everything. Two levers on `/order`, depending on what you want to cover:
+8. **Sponsored / gasless (API only — skip for CLI)** — "Does the user need to hold SOL for this trade, or is your app covering fees?" Default = user pays everything. Two levers on `/order`, depending on what you want to cover:
    - `sponsor=<sponsor-wallet-base58>` — sponsor pays tx fee + ATA creation + market-init. Tx must be co-signed by both user and sponsor. Optional `sponsorExec=true|false` picks sponsor-executes (default) vs. user-executes.
    - `predictionMarketInitPayer=<wallet>` — covers *only* the one-time market-init rent; user still signs and pays their own tx fee and ATA creation. Useful when you only want to eat the init cost. Markets can also be pre-initialized out-of-band via `GET /prediction-market-init`.
    - The CLI doesn't support either sponsorship lever.
@@ -78,6 +92,7 @@ Once the market is `determined` / `finalized` **and** `redemptionStatus: "open"`
 - **Maintenance window.** Kalshi is offline **Thursdays 3:00–5:00 AM ET, every week**. CLPs stop serving routes; `/order` returns `route_not_found` (the CLI annotates with a maintenance note). Block PM submissions for the whole window.
 - **`route_not_found` is a catch-all.** Wrong mint, amount below the contract-price floor, no liquidity right now, *or* the maintenance window. Verify mint, atomic units, and that the amount covers ≥ 1 contract before assuming illiquidity.
 - **Browser apps must proxy.** The Trading API serves no CORS — call it from a backend (Next.js API route or equivalent), never directly from the browser.
+- **CLI shell-outs authenticate themselves; direct HTTP calls don't.** If your script or backend shells out to `dflow trade`, that leg uses the CLI's stored config from `dflow setup` (key, wallet, RPC) — **you plumb nothing** for CLI invocations. If the same script *also* hits the Trade API or Metadata API directly over HTTP (e.g. scanner-style discovery, your own `/order` call, `/quote`, sibling HTTP tools), that HTTP client needs the key handed in explicitly (env var, `.env`, `--api-key` flag, header). The CLI's stored key is not reusable by a sibling HTTP client, and an env-var key is not injected into the CLI either — they're independent plumbing sites for the same DFlow key. **Only ask about an API key for the HTTP portion; pure CLI scripts don't need one.**
 
 ## When something doesn't fit
 

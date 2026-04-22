@@ -80,16 +80,19 @@ A holding is redeemable iff **all three**:
 To redeem, hand off to `dflow-kalshi-trading` (redemption is a sell of the winning side back to the settlement mint).
 
 ### Pending order check
-If the app submitted the order itself, persist the `orderAddress` returned at submission and poll `GET /order-status?orderAddress=<addr>` until terminal. There's no list-by-wallet endpoint; pending state is typically very short (fills land in a few seconds), so this is rarely a user-facing concern.
+If the app submitted the order itself, persist the `orderAddress` returned at submission and poll `GET /order-status?orderAddress=<addr>` until terminal. There's no list-by-wallet endpoint. Most fills terminate well under the CLI's 120s poll budget, so this is rarely a user-facing concern — but outside the maintenance window, don't assume a specific fill time.
 
 ## What to ASK the user (and what NOT to ask)
 
-**Ask if missing:**
+**View shape — infer if unambiguous, confirm if not:**
 
 1. **Which view** — holdings / mark-to-market / realized P&L / activity / redeemable.
 2. **Wallet pubkey** — API only (CLI uses the active vault wallet).
-3. **API key** — `markets/batch` plus repeated `onchain-trades` pulls hit dev rate limits fast. Yes → prod host `https://prediction-markets-api.dflow.net` with `x-api-key`. No → dev host `https://dev-prediction-markets-api.dflow.net`. Pointer: `https://pond.dflow.net/build/api-key`.
-4. **RPC URL** — **yes, ask here**, unlike spot/PM trading or market-data. The app reads token accounts directly via RPC; there's no wallet in the loop to do it for you. Recommend [Helius](https://helius.dev). CLI users already have one from `dflow setup`.
+
+**Infra — always ask, never infer (HTTP/RPC pipeline only; the `dflow positions` quick path needs neither):**
+
+3. **DFlow API key** (only when the script is hitting the Metadata API directly — `markets/batch`, `onchain-trades`, etc.). The CLI quick path (`dflow positions`) doesn't need one — it uses the CLI's stored config. **For the HTTP pipeline, ask with a clean, neutral question: *"Do you have a DFlow API key?"*** Don't presuppose where the key lives — phrasings like *"do you have it in env?"* or *"is `DFLOW_API_KEY` set?"* nudge the user toward env-var defaults they didn't ask for. Surface the choice; don't silently fall back to env or to dev. It's **one DFlow key everywhere** — same `x-api-key` unlocks Metadata + Trade APIs. Yes → prod host `https://prediction-markets-api.dflow.net` with `x-api-key`. No → dev host `https://dev-prediction-markets-api.dflow.net`, rate-limited. Pointer: `https://pond.dflow.net/build/api-key`. **When you generate a script, log the resolved host + key-presence at startup.**
+4. **RPC URL** — **yes, ask here**, unlike spot/PM trading or market-data. The HTTP pipeline reads token accounts directly via RPC; there's no wallet in the loop to do it for you. Recommend [Helius](https://helius.dev). CLI users on the `dflow positions` quick path don't need one — `dflow setup` already configured it.
 
 **Do NOT ask about:**
 - Settlement mint, slippage, fees, signing — read-only skill. If the user pivots to acting on a position, hand off to `dflow-kalshi-trading`.
@@ -102,10 +105,12 @@ If the app submitted the order itself, persist the `orderAddress` returned at su
 - **Two POST endpoints.** `filter_outcome_mints` and `markets/batch` both take a POST body with an address list. Easy to default to GET and fail.
 - **Stablecoins aren't outcome mints.** `filter_outcome_mints` strips them out (they're settlement, not positions). Track USDC / CASH balances separately from the PM view.
 - **Redemption readiness is three ANDed conditions**, not just "market closed." Surface a redeemable list only when status + `redemptionStatus` + winning side all line up.
-- **Balance lag after fill.** A fill that just landed onchain can take a second or two to show up on a non-indexed RPC — debounce rapid refreshes, and if the user expected a balance change and doesn't see it, retry once before assuming failure.
+- **Balance lag after fill.** A fill that just landed onchain may not show up immediately on a non-indexed RPC — the token account update propagates after the transaction finalizes. Debounce rapid refreshes, and if the user expected a balance change and doesn't see it, retry before assuming failure.
 - **`dflow positions` is active-vault only.** No `--wallet` flag; switching wallets means `dflow setup` or the API pipeline.
 - **`dflow positions` returns balances, not mark prices.** You get `amount` / `uiAmount` / `decimals` plus `side` + `market.title` + `market.status` on outcome tokens. That already gets you close to dollar value for USDC and CASH (their `uiAmount` ≈ USD modulo depeg), but **outcome tokens** need `yesBid` / `noBid` from `markets/batch` to mark, and **other spot tokens** (SOL, etc.) need an outside spot price. No `redemptionStatus` and no cost basis in the output either — pair with `markets/batch` for redemption eligibility, `/onchain-trades` for P&L.
 - **Closed outcome token accounts.** After a full sell or redeem, the token account may be closed (rent reclaimed) and will no longer show up on the wallet. That's expected — check onchain-trades history if you need the record.
+- **Same market, different rail = separate position.** Every Kalshi market on DFlow has a USDC rail and a CASH rail, each with its own `yesMint` / `noMint`. A wallet can hold YES on both rails of the same market — those are two rows in the portfolio, two redemption flows, and their mark-to-market sums independently. Rare in practice (most users stick to one rail) but worth handling if it shows up.
+- **Two surfaces, two auth paths.** `dflow positions` shells out through the CLI and uses its stored config (key, wallet, RPC) — the script plumbs nothing for that call. The build-your-own HTTP pipeline (`markets/batch`, `onchain-trades`, RPC `getParsedTokenAccountsByOwner`) is plain HTTP/RPC and needs the DFlow API key + RPC URL plumbed in explicitly. They're independent: the CLI's stored key isn't reachable from a sibling HTTP client. Only ask about API key + RPC for the HTTP pipeline.
 
 ## When something doesn't fit
 

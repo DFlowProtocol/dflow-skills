@@ -35,20 +35,20 @@ For each dataset below, the one-liner covers all three shapes. Field-level detai
 
 ### Trades — **two endpoints, overlapping but different scopes**
 - **`GET /api/v1/trades`** (and `/trades/by-mint/{mint}`) — the **complete market print tape**. All trades that hit Kalshi's orderbook, which includes DFlow onchain fills (those hit Kalshi's book too; see the "Do onchain trades show up on Kalshi's trade websocket?" FAQ). This is the default for "show me trades on this market." Stream equivalent: `trades` channel.
-- **`GET /api/v1/onchain-trades`** (and `/onchain-trades-by-market/{ticker}`, `/onchain-trades-by-event/{ticker}`) — **DFlow onchain fills only**, with onchain-specific fields that `/trades` doesn't carry: `wallet`, `transactionSignature`, `id`, `inputAmount`, `outputAmount`, `createdAt`. Subset of what's on `/trades`, but richer per-row. No WS stream.
+- **`GET /api/v1/onchain-trades`** (and `/onchain-trades/by-market/{ticker}`, `/onchain-trades/by-event/{eventTicker}`) — **DFlow onchain fills only**, with onchain-specific fields that `/trades` doesn't carry: `wallet`, `transactionSignature`, `id`, `inputAmount`, `outputAmount`, `createdAt`. Subset of what's on `/trades`, but richer per-row. No WS stream.
 - Decision: *complete tape* → `/trades`. *Wallet-scoped activity feed, DFlow-execution analytics, tx-signature lookups* → `/onchain-trades`. Real-time fill detection for a specific user order → parse program events directly (see `/build/prediction-markets/onchain-trade-parsing` in the docs MCP).
 
 ### Top-of-book prices
-- Snapshot: read `yesBid` / `yesAsk` / `noBid` / `noAsk` directly from the market object (`GET /api/v1/markets/{ticker}`) — no separate endpoint.
+- Snapshot: read `yesBid` / `yesAsk` / `noBid` / `noAsk` directly from the market object (`GET /api/v1/market/{ticker}` — singular) — no separate endpoint.
 - Stream: `prices` channel.
 
 ### Candlesticks (OHLCV)
-- Market-level: `GET /api/v1/market/{ticker}/candlesticks` and `/candlesticks-by-mint`.
+- Market-level: `GET /api/v1/market/{ticker}/candlesticks` or `/api/v1/market/by-mint/{mint}/candlesticks`.
 - Event-level: `GET /api/v1/event/{ticker}/candlesticks`.
 - **5,000-candle cap per request** (see Gotchas).
 
 ### Forecast percentile history
-- Event-level: `GET /api/v1/event/{series_ticker}/{event_id}/forecast_percentile_history` (plus a by-mint variant). Kalshi's historical forecast distribution for an event.
+- Event-level: `GET /api/v1/event/{seriesTicker}/{eventId}/forecast_percentile_history` (plus `/api/v1/event/by-mint/{mint}/forecast_percentile_history`). Kalshi's historical forecast distribution for an event.
 
 ### Live data (Kalshi passthrough)
 - `GET /api/v1/live_data`, `/live_data/by-event/{ticker}`, `/live_data/by-mint/{mint}`.
@@ -67,13 +67,16 @@ Exact message schemas (prices, trades, orderbook), heartbeat/ping behavior, and 
 
 ## What to ASK the user (and what NOT to ask)
 
-**Ask if missing:**
+**Query shape — infer if unambiguous, confirm if not:**
 
 1. **Which market** — ticker or outcome mint.
 2. **Which dataset** — orderbook, trades (Kalshi vs onchain), prices, candles, forecasts, or live data.
 3. **Snapshot / history / stream** — infer from phrasing, confirm if ambiguous.
 4. **History bounds / interval** — time range (`startTs`, `endTs`) and `periodInterval` for candles; limit for trades.
-5. **API key** — streams, full-universe subscriptions, and repeated candle pulls all hit dev rate limits fast. If yes → prod host (`https://prediction-markets-api.dflow.net` REST, `wss://prediction-markets-api.dflow.net/api/v1/ws` WS) with `x-api-key` on the header (REST **and** the WS upgrade). If no → dev host (`https://dev-prediction-markets-api.dflow.net`, `wss://dev-prediction-markets-api.dflow.net/api/v1/ws`), and point them at `https://pond.dflow.net/build/api-key` for a real key.
+
+**Infra — always ask, never infer:**
+
+5. **DFlow API key.** **Ask with a clean, neutral question: *"Do you have a DFlow API key?"*** Don't presuppose where the key lives — phrasings like *"do you have it in env?"* or *"is `DFLOW_API_KEY` set?"* nudge the user toward env-var defaults they didn't ask for. Don't assume the user has one just because they mention the `dflow` CLI is configured. Surface the choice; don't silently fall back to env or to dev. It's **one key for everything DFlow** — same `x-api-key` unlocks the Trade API *and* the Metadata API, REST *and* WebSocket. If yes → prod host (`https://prediction-markets-api.dflow.net` REST, `wss://prediction-markets-api.dflow.net/api/v1/ws` WS) with `x-api-key` on every request (REST and the WS upgrade). If no → dev host (`https://dev-prediction-markets-api.dflow.net`, `wss://dev-prediction-markets-api.dflow.net/api/v1/ws`), rate-limited; point them at `https://pond.dflow.net/build/api-key` for a prod key. **When you generate a script, log the resolved host + key-presence at startup** so the user can see which rails they're on.
 
 **Do NOT ask about:**
 - **RPC, wallet, signing** — this skill is read-only public data.
@@ -90,6 +93,7 @@ Exact message schemas (prices, trades, orderbook), heartbeat/ping behavior, and 
 - **WebSocket `all: true` is a firehose.** Especially on `prices` and `orderbook`. Use a ticker list unless the monitor truly needs universe-wide coverage.
 - **WS subscriptions don't survive reconnects.** After every reconnect, resend every `subscribe` message you had before the drop.
 - **Streams can go quiet in the maintenance window** — Thursdays 3:00–5:00 AM ET, Kalshi is offline; expect sparse or missing WS traffic and stale REST fields.
+- **The CLI's stored key doesn't flow into your script's HTTP client.** `dflow setup` stores the key for the `dflow` binary's own use. The Metadata API calls your script makes directly are separate — they need the key plumbed in (env, `.env`, flag). It's one DFlow key, but two plumbing sites any time you mix CLI invocations with direct HTTP/WS calls in the same codebase.
 
 ## When something doesn't fit
 

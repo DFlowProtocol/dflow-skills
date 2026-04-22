@@ -77,7 +77,7 @@ For PM: the fee ATA must be a settlement-mint ATA (USDC or CASH), since that's t
 2. **Rate** — bps value for fixed; `k` value for dynamic.
 3. **Collection token(s)** — which token(s) do you want the fee paid in, and do you already have a matching ATA owned by the builder wallet?
 4. **Imperative or declarative?** Only matters for spot and only matters for `platformFeeMode` — declarative can only fee in `outputMint`.
-5. **API key** — same pattern as other trading skills. Yes → prod `quote-api.dflow.net` + `x-api-key`. No → dev `dev-quote-api.dflow.net`. Pointer: `https://pond.dflow.net/build/api-key`.
+5. **DFlow API key.** Platform fees are an HTTP-only feature (params on the user's own `/order` call) — there's no CLI flag for them, so you're always plumbing the key into the script's HTTP client. **Ask with a clean, neutral question: *"Do you have a DFlow API key?"*** Don't presuppose where the key lives — phrasings like *"do you have it in env?"* or *"is `DFLOW_API_KEY` set?"* nudge the user toward env-var defaults they didn't ask for. Surface the choice; don't silently fall back to env or to dev. It's **one DFlow key everywhere** — same `x-api-key` unlocks Trade API + Metadata API, REST + WebSocket. Yes → prod `https://quote-api.dflow.net` + `x-api-key`. No → dev `https://dev-quote-api.dflow.net`, rate-limited. Pointer: `https://pond.dflow.net/build/api-key`.
 
 **Do NOT ask about:**
 - RPC, signing, slippage — orthogonal to fees; the base trading skill handles them.

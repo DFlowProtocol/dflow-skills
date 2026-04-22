@@ -73,43 +73,54 @@ dflow setup
 
 ## Installing these skills
 
-Pick the pattern that matches your host. We recommend **symlinking** (not copying) — that way `git pull` on the repo updates every installed skill in place.
+### Recommended: `npx skills`
 
-### Claude Code (personal) — all skills
+The [`skills` CLI](https://github.com/vercel-labs/skills) (from Vercel Labs) auto-detects your coding agent — Claude Code, Cursor, Codex, OpenCode, and [40+ more](https://skills.sh) — installs every `SKILL.md` into the right place for each, and defaults to symlinks so `git pull` / `npx skills update` picks up upstream changes.
+
+```bash
+# Install all DFlow skills into every agent the CLI detects on your machine
+npx skills add DFlowProtocol/dflow-skills
+
+# Install globally (to ~/<agent>/skills/) instead of the current project
+npx skills add DFlowProtocol/dflow-skills -g
+
+# Install only one skill
+npx skills add DFlowProtocol/dflow-skills -s dflow-kalshi-trading
+
+# Install to a specific agent only
+npx skills add DFlowProtocol/dflow-skills -a claude-code
+npx skills add DFlowProtocol/dflow-skills -a cursor
+
+# List available skills without installing
+npx skills add DFlowProtocol/dflow-skills --list
+
+# Update later
+npx skills update
+```
+
+Full CLI reference: [skills.sh/docs](https://skills.sh/docs) · flags cheat sheet in the [`vercel-labs/skills` README](https://github.com/vercel-labs/skills). Telemetry is on by default; opt out with `DISABLE_TELEMETRY=1` or `DO_NOT_TRACK=1`.
+
+### Manual install (alternative)
+
+If you'd rather not run `npx skills` — you're on a host it doesn't support, you want to audit the files first, or you're uploading to Claude.ai (web) — clone and wire up the skills directly.
+
+**Claude Code / Cursor / Codex / any agent that reads a `skills/` directory:**
 
 ```bash
 git clone https://github.com/DFlowProtocol/dflow-skills.git
-mkdir -p ~/.claude/skills
+mkdir -p ~/.claude/skills                          # or ~/.cursor/skills, ~/.codex/skills, etc.
 ln -s "$(pwd)"/dflow-skills/skills/* ~/.claude/skills/
 ```
 
-### Claude Code (personal) — one skill
+For project-scoped installs, target `.claude/skills/` (or the equivalent under your project root — see the [vercel-labs/skills agent table](https://github.com/vercel-labs/skills#supported-agents) for per-agent paths) instead of the `~/.<agent>/skills/` path.
 
-```bash
-git clone https://github.com/DFlowProtocol/dflow-skills.git
-mkdir -p ~/.claude/skills
-ln -s "$(pwd)/dflow-skills/skills/dflow-kalshi-trading" ~/.claude/skills/
-```
+Swap a single skill by pointing `ln -s` at that folder: `ln -s "$(pwd)/dflow-skills/skills/dflow-kalshi-trading" ~/.claude/skills/`. Prefer `cp -r`? Substitute it for `ln -s` — you'll just need to re-run after `git pull` to pick up updates.
 
-Swap `dflow-kalshi-trading` for any skill folder under `skills/`.
-
-### Claude Code (project-scoped)
-
-Same commands, but target `.claude/skills/` in your project root instead of `~/.claude/skills/`. Commits alongside your project; only that project sees the skills.
-
-### Cursor
-
-Same commands, target `~/.cursor/skills/` (personal) or `.cursor/skills/` (workspace-scoped).
-
-### Claude.ai (web)
+**Claude.ai (web):**
 
 1. Clone or download this repo.
 2. Zip the `skills/<skill-name>/` folder you want (one zip per skill).
 3. Claude.ai → **Settings → Capabilities → Skills → Upload skill**.
-
-### Prefer `cp -r` over `ln -s`?
-
-Fine — substitute `cp -r` for `ln -s` in any of the commands above. You just won't auto-pick-up updates; you'll need to re-copy after `git pull`.
 
 ## Repo layout
 
