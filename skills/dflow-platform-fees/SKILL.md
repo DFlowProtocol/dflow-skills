@@ -46,7 +46,7 @@ Dynamic fees are **not available on spot**.
 
 ## Core `/order` parameters
 
-Full param details and encoding → docs MCP (`/build/trading/platform-fees`, `/build/recipes/trading/platform-fees`).
+Full param details and encoding → docs MCP, or read the pages directly: [`/build/trading/platform-fees`](https://pond.dflow.net/build/trading/platform-fees), [`/build/recipes/trading/platform-fees`](https://pond.dflow.net/build/recipes/trading/platform-fees).
 
 - `platformFeeBps` — fixed fee in bps. Works everywhere.
 - `platformFeeScale` — dynamic fee coefficient. PM outcome tokens only.

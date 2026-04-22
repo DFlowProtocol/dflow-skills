@@ -36,7 +36,7 @@ For each dataset below, the one-liner covers all three shapes. Field-level detai
 ### Trades — **two endpoints, overlapping but different scopes**
 - **`GET /api/v1/trades`** (and `/trades/by-mint/{mint}`) — the **complete market print tape**. All trades that hit Kalshi's orderbook, which includes DFlow onchain fills (those hit Kalshi's book too; see the "Do onchain trades show up on Kalshi's trade websocket?" FAQ). This is the default for "show me trades on this market." Stream equivalent: `trades` channel.
 - **`GET /api/v1/onchain-trades`** (and `/onchain-trades/by-market/{ticker}`, `/onchain-trades/by-event/{eventTicker}`) — **DFlow onchain fills only**, with onchain-specific fields that `/trades` doesn't carry: `wallet`, `transactionSignature`, `id`, `inputAmount`, `outputAmount`, `createdAt`. Subset of what's on `/trades`, but richer per-row. No WS stream.
-- Decision: *complete tape* → `/trades`. *Wallet-scoped activity feed, DFlow-execution analytics, tx-signature lookups* → `/onchain-trades`. Real-time fill detection for a specific user order → parse program events directly (see `/build/prediction-markets/onchain-trade-parsing` in the docs MCP).
+- Decision: *complete tape* → `/trades`. *Wallet-scoped activity feed, DFlow-execution analytics, tx-signature lookups* → `/onchain-trades`. Real-time fill detection for a specific user order → parse program events directly (see [`/build/prediction-markets/onchain-trade-parsing`](https://pond.dflow.net/build/prediction-markets/onchain-trade-parsing)).
 
 ### Top-of-book prices
 - Snapshot: read `yesBid` / `yesAsk` / `noBid` / `noAsk` directly from the market object (`GET /api/v1/market/{ticker}` — singular) — no separate endpoint.

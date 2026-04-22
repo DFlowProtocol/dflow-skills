@@ -6,19 +6,21 @@ Each skill is a focused recipe — a single `SKILL.md` that captures the workflo
 
 ## Skills
 
-| Skill | What it does |
-| ----- | ------------ |
-| [`dflow-spot-trading`](skills/dflow-spot-trading) | Swap any pair of Solana tokens via DFlow CLI or Trading API. |
-| [`dflow-kalshi-trading`](skills/dflow-kalshi-trading) | Buy, sell, and redeem YES/NO outcome tokens on Kalshi prediction markets. |
+
+| Skill                                                               | What it does                                                                           |
+| ------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| [`dflow-spot-trading`](skills/dflow-spot-trading)                   | Swap any pair of Solana tokens via DFlow CLI or Trading API.                           |
+| [`dflow-kalshi-trading`](skills/dflow-kalshi-trading)               | Buy, sell, and redeem YES/NO outcome tokens on Kalshi prediction markets.              |
 | [`dflow-kalshi-market-scanner`](skills/dflow-kalshi-market-scanner) | Discover and filter Kalshi events, markets, series, tags, and historical candlesticks. |
-| [`dflow-kalshi-market-data`](skills/dflow-kalshi-market-data) | Real-time orderbook, trade, and live-data streams for Kalshi markets. |
-| [`dflow-kalshi-portfolio`](skills/dflow-kalshi-portfolio) | View open positions, unrealized P&L, and reclaim rent from empty outcome accounts. |
-| [`dflow-proof-kyc`](skills/dflow-proof-kyc) | Integrate Proof identity verification so wallets can buy on Kalshi. |
-| [`dflow-platform-fees`](skills/dflow-platform-fees) | Take a builder cut on swaps and PM trades (`platformFeeBps`, `platformFeeScale`). |
+| [`dflow-kalshi-market-data`](skills/dflow-kalshi-market-data)       | Real-time orderbook, trade, and live-data streams for Kalshi markets.                  |
+| [`dflow-kalshi-portfolio`](skills/dflow-kalshi-portfolio)           | View open positions, unrealized P&L, and reclaim rent from empty outcome accounts.     |
+| [`dflow-proof-kyc`](skills/dflow-proof-kyc)                         | Integrate Proof identity verification so wallets can buy on Kalshi.                    |
+| [`dflow-platform-fees`](skills/dflow-platform-fees)                 | Take a builder cut on swaps and PM trades (`platformFeeBps`, `platformFeeScale`).      |
+
 
 ## Recommended: install the DFlow docs MCP
 
-Every skill tells the agent to query the DFlow docs MCP (`search_d_flow`, `query_docs_filesystem_d_flow`) for anything reference-y. The skills are deliberately the *recipe* (workflow ordering, gates, defaults, gotchas); the MCP is the *reference* (every parameter, every endpoint, every error code). The skills work without it but the agent will guess on field-level questions; with it, the agent can look things up canonically.
+Every skill tells the agent to query the DFlow docs MCP for anything reference-y. The skills are deliberately the *recipe* (workflow ordering, gates, defaults, gotchas); the MCP is the *reference* (every parameter, every endpoint, every error code). The skills work without it but the agent will guess on field-level questions; with it, the agent can look things up canonically.
 
 Server URL: `https://pond.dflow.net/mcp`
 
@@ -69,7 +71,7 @@ curl -fsS https://cli.dflow.net | sh
 dflow setup
 ```
 
-`dflow setup` is interactive — it asks for a wallet, passphrase, and Solana RPC URL ([Helius](https://helius.dev) recommended for production). After that, every skill that touches the CLI just works.
+`dflow setup` is interactive — it asks for a wallet, passphrase, and Solana RPC URL. After that, every skill that touches the CLI just works.
 
 ## Installing these skills
 
@@ -98,11 +100,9 @@ npx skills add DFlowProtocol/dflow-skills --list
 npx skills update
 ```
 
-Full CLI reference: [skills.sh/docs](https://skills.sh/docs) · flags cheat sheet in the [`vercel-labs/skills` README](https://github.com/vercel-labs/skills). Telemetry is on by default; opt out with `DISABLE_TELEMETRY=1` or `DO_NOT_TRACK=1`.
-
 ### Manual install (alternative)
 
-If you'd rather not run `npx skills` — you're on a host it doesn't support, you want to audit the files first, or you're uploading to Claude.ai (web) — clone and wire up the skills directly.
+If you'd rather not run `npx skills`:
 
 **Claude Code / Cursor / Codex / any agent that reads a `skills/` directory:**
 
@@ -130,3 +130,4 @@ skills/
   dflow-kalshi-trading/SKILL.md
   ... (one folder per skill, each just a SKILL.md)
 ```
+

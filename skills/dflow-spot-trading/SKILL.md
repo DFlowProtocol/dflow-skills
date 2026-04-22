@@ -58,7 +58,7 @@ await connection.confirmTransaction(                         // app's RPC (reads
 
   Fields marked *"Specified if and only if the request included the user's public key"* in the OpenAPI (`transaction`, `lastValidBlockHeight`, `computeUnitLimit`, `prioritizationFeeLamports`, `addressLookupTables`) are absent on quote-only calls — check before using.
 
-  Full runnable example (server-side `Keypair` variant) at `/build/recipes/trading/imperative-trade` (links to the DFlow Cookbook Repo). Field-level schema details via the docs MCP.
+  Full runnable example (server-side `Keypair` variant): [`/build/recipes/trading/imperative-trade`](https://pond.dflow.net/build/recipes/trading/imperative-trade) (links to the DFlow Cookbook Repo). Field-level schema details via the docs MCP.
 
 ### Trade — declarative `/intent` + `/submit-intent` (opt-in)
 
@@ -108,7 +108,7 @@ Only suggest declarative when the user explicitly asks for sandwich protection o
 
 For anything not covered above — full parameter lists, full error tables, declarative intent shape, legacy `/quote` + `/swap` flow, sponsorship fields, new features — query the docs MCP (`search_d_flow`, `query_docs_filesystem_d_flow`). Don't guess.
 
-For runnable code, point the user at the **DFlow docs recipes**: `/build/recipes/trading/{imperative-trade, declarative-trade}` (each links to the DFlow Cookbook Repo for clone-and-go).
+For runnable code, point the user at the **DFlow docs recipes** (each links to the DFlow Cookbook Repo for clone-and-go): [`/build/recipes/trading/imperative-trade`](https://pond.dflow.net/build/recipes/trading/imperative-trade), [`/build/recipes/trading/declarative-trade`](https://pond.dflow.net/build/recipes/trading/declarative-trade).
 
 ## Sibling skills
 

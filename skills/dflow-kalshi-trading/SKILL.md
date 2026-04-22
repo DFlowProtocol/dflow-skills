@@ -98,7 +98,7 @@ Once the market is `determined` / `finalized` **and** `redemptionStatus: "open"`
 
 For anything not covered above — full parameter lists, full error tables, response schemas, partial-fill handling, rare flags, new features — query the docs MCP (`search_d_flow`, `query_docs_filesystem_d_flow`). Don't guess.
 
-For runnable code, point the user at the **DFlow docs recipes**: `/build/recipes/prediction-markets/{increase-position, decrease-position, redeem-outcome-tokens}` (each links to the DFlow Cookbook Repo for clone-and-go).
+For runnable code, point the user at the **DFlow docs recipes** (each links to the DFlow Cookbook Repo for clone-and-go): [`/build/recipes/prediction-markets/increase-position`](https://pond.dflow.net/build/recipes/prediction-markets/increase-position), [`/build/recipes/prediction-markets/decrease-position`](https://pond.dflow.net/build/recipes/prediction-markets/decrease-position), [`/build/recipes/prediction-markets/redeem-outcome-tokens`](https://pond.dflow.net/build/recipes/prediction-markets/redeem-outcome-tokens).
 
 ## Sibling skills
 
