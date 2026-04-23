@@ -17,13 +17,13 @@ The `skills` [CLI](https://github.com/vercel-labs/skills) is interactive, it det
 
 | Skill                                                               | What it does                                                                           |
 | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| [`dflow-spot-trading`](skills/dflow-spot-trading)                   | Swap any pair of Solana tokens via DFlow CLI or Trading API.                           |
-| [`dflow-kalshi-trading`](skills/dflow-kalshi-trading)               | Buy, sell, and redeem YES/NO outcome tokens on Kalshi prediction markets.              |
-| [`dflow-kalshi-market-scanner`](skills/dflow-kalshi-market-scanner) | Discover and filter Kalshi events, markets, series, tags, and historical candlesticks. |
-| [`dflow-kalshi-market-data`](skills/dflow-kalshi-market-data)       | Real-time orderbook, trade, and live-data streams for Kalshi markets.                  |
-| [`dflow-kalshi-portfolio`](skills/dflow-kalshi-portfolio)           | View open positions, unrealized P&L, and reclaim rent from empty outcome accounts.     |
-| [`dflow-proof-kyc`](skills/dflow-proof-kyc)                         | Integrate Proof identity verification so wallets can buy on Kalshi.                    |
-| [`dflow-platform-fees`](skills/dflow-platform-fees)                 | Take a builder cut on swaps and PM trades (`platformFeeBps`, `platformFeeScale`).      |
+| [`dflow-spot-trading`](skills/dflow-spot-trading/SKILL.md)                   | Swap any pair of Solana tokens via DFlow CLI or Trading API.                           |
+| [`dflow-kalshi-trading`](skills/dflow-kalshi-trading/SKILL.md)               | Buy, sell, and redeem YES/NO outcome tokens on Kalshi prediction markets.              |
+| [`dflow-kalshi-market-scanner`](skills/dflow-kalshi-market-scanner/SKILL.md) | Discover and filter Kalshi events, markets, series, tags, and historical candlesticks. |
+| [`dflow-kalshi-market-data`](skills/dflow-kalshi-market-data/SKILL.md)       | Real-time orderbook, trade, and live-data streams for Kalshi markets.                  |
+| [`dflow-kalshi-portfolio`](skills/dflow-kalshi-portfolio/SKILL.md)           | View open positions, unrealized P&L, and reclaim rent from empty outcome accounts.     |
+| [`dflow-proof-kyc`](skills/dflow-proof-kyc/SKILL.md)                         | Integrate Proof identity verification so wallets can buy on Kalshi.                    |
+| [`dflow-platform-fees`](skills/dflow-platform-fees/SKILL.md)                 | Take a builder cut on swaps and PM trades (`platformFeeBps`, `platformFeeScale`).      |
 
 
 ## Recommended: install the DFlow docs MCP
