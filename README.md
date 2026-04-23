@@ -79,7 +79,24 @@ curl -fsS https://cli.dflow.net | sh
 dflow setup
 ```
 
+Prefer to inspect before executing? Split the install into two steps:
+
+```bash
+curl -fsSL https://cli.dflow.net -o dflow-install.sh
+less dflow-install.sh     # audit, then:
+sh dflow-install.sh
+```
+
 `dflow setup` is interactive — it asks for a wallet, passphrase, and Solana RPC URL. After that, every skill that touches the CLI just works.
+
+## Security
+
+Honest disclosure, since the `npx skills` install flow flags the trading skills as "HIGH-RISK" (Socket correctly notes they're "purpose-aligned" and "not overtly malicious," but describes the capability surface accurately):
+
+- **What these skills are.** Plain markdown with YAML frontmatter. They don't execute at install time, at skill-load time, or at all — they're instructions that load into an agent's context window when the agent decides they're relevant.
+- **What they enable.** An AI agent reading these skills can execute real-money Solana trades on behalf of the wallet you've configured (CLI: your passphrase-protected vault; API: the wallet adapter your app wires up). Treat that capability like an API-key scope — don't grant access to an agent you wouldn't trust with a terminal session.
+- **Authorization stays at the wallet, not the agent.** CLI trades sign through [Open Wallet Standard](https://openwallet.foundation/) — keys live encrypted in a local vault and never enter the agent's context. API trades sign through whichever wallet adapter the app uses (Phantom, Privy, Turnkey, etc.). The agent constructs the request; the wallet signs it.
+- **The docs MCP is read-only.** `https://pond.dflow.net/mcp` serves DFlow documentation. No trade execution, no key handling. It's also optional — skills work without it (agents just guess more on field-level questions).
 
 ## Repo layout
 
