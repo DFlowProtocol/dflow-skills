@@ -32,7 +32,7 @@ If the wallet isn't verified, redirect the user to Proof's hosted flow. The deep
 - URL: `https://dflow.net/proof?wallet=<addr>&signature=<sig>&timestamp=<ms>&redirect_uri=<url>`
 - Optional: `email`, `projectId`.
 - Signature: user signs the exact message `Proof KYC verification: {timestamp}` (Unix ms, 13 digits) with their wallet; base58-encode the bytes.
-- Full signing snippet and parameter table → docs MCP, or read directly: [`/build/proof/partner-integration`](https://pond.dflow.net/build/proof/partner-integration).
+- Full signing snippet and parameter table → docs MCP, or read directly: [`/resources/proof/partner-integration`](https://pond.dflow.net/resources/proof/partner-integration).
 
 ### Handle the return
 
@@ -86,10 +86,10 @@ Three patterns, each maps to a user intent:
 
 Defer to the docs MCP for full reference — specifically:
 
-- [`/build/proof/partner-integration`](https://pond.dflow.net/build/proof/partner-integration) — deep-link code (signature generation, URL building), caching sample, handling edge cases (signature expiration, user cancellation, network errors), security guidance.
-- [`/build/proof/user-journeys`](https://pond.dflow.net/build/proof/user-journeys) — diagrams for new-direct, new-from-partner, and returning-user flows.
-- [`/build/proof-api/verify-address`](https://pond.dflow.net/build/proof-api/verify-address) — the single public endpoint's reference.
-- [`/build/faqs`](https://pond.dflow.net/build/faqs) — Proof + embedded wallets, Proof + dev endpoints, redirect debugging.
+- [`/resources/proof/partner-integration`](https://pond.dflow.net/resources/proof/partner-integration) — deep-link code (signature generation, URL building), caching sample, handling edge cases (signature expiration, user cancellation, network errors), security guidance.
+- [`/resources/proof/user-journeys`](https://pond.dflow.net/resources/proof/user-journeys) — diagrams for new-direct, new-from-partner, and returning-user flows.
+- [`/resources/proof-api/verify-address`](https://pond.dflow.net/resources/proof-api/verify-address) — the single public endpoint's reference.
+- [`/resources/faqs`](https://pond.dflow.net/resources/faqs) — Proof + embedded wallets, Proof + dev endpoints, redirect debugging.
 
 ## Sibling skills
 

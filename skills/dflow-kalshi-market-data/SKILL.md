@@ -13,7 +13,7 @@ Pull data about a **known** Kalshi market (or set of markets) — orderbook, tra
 
 ## Surface
 
-All data endpoints in this skill run against the **Metadata API** (`https://pond.dflow.net/build/metadata-api`) — REST for snapshots and history, WebSockets for live streams. Call it from anywhere: a `curl` from the command line, a Node/Python script, a cron job, a backend, or a Next.js proxy fronting a browser UI.
+All data endpoints in this skill run against the **Metadata API** (`https://pond.dflow.net/resources/metadata-api`) — REST for snapshots and history, WebSockets for live streams. Call it from anywhere: a `curl` from the command line, a Node/Python script, a cron job, a backend, or a Next.js proxy fronting a browser UI.
 
 If the user says "run this from my terminal", **don't reach for the `dflow` CLI** — it has no market-data subcommands. Write a short HTTP/WS script against the Metadata API instead.
 
@@ -36,7 +36,7 @@ For each dataset below, the one-liner covers all three shapes. Field-level detai
 ### Trades — **two endpoints, overlapping but different scopes**
 - **`GET /api/v1/trades`** (and `/trades/by-mint/{mint}`) — the **complete market print tape**. All trades that hit Kalshi's orderbook, which includes DFlow onchain fills (those hit Kalshi's book too; see the "Do onchain trades show up on Kalshi's trade websocket?" FAQ). This is the default for "show me trades on this market." Stream equivalent: `trades` channel.
 - **`GET /api/v1/onchain-trades`** (and `/onchain-trades/by-market/{ticker}`, `/onchain-trades/by-event/{eventTicker}`) — **DFlow onchain fills only**, with onchain-specific fields that `/trades` doesn't carry: `wallet`, `transactionSignature`, `id`, `inputAmount`, `outputAmount`, `createdAt`. Subset of what's on `/trades`, but richer per-row. No WS stream.
-- Decision: *complete tape* → `/trades`. *Wallet-scoped activity feed, DFlow-execution analytics, tx-signature lookups* → `/onchain-trades`. Real-time fill detection for a specific user order → parse program events directly (see [`/build/prediction-markets/onchain-trade-parsing`](https://pond.dflow.net/build/prediction-markets/onchain-trade-parsing)).
+- Decision: *complete tape* → `/trades`. *Wallet-scoped activity feed, DFlow-execution analytics, tx-signature lookups* → `/onchain-trades`. Real-time fill detection for a specific user order → parse program events directly (see [`/prediction-markets/onchain-trade-parsing`](https://pond.dflow.net/prediction-markets/onchain-trade-parsing)).
 
 ### Top-of-book prices
 - Snapshot: read `yesBid` / `yesAsk` / `noBid` / `noAsk` directly from the market object (`GET /api/v1/market/{ticker}` — singular) — no separate endpoint.
@@ -76,7 +76,7 @@ Exact message schemas (prices, trades, orderbook), heartbeat/ping behavior, and 
 
 **Infra — always ask, never infer:**
 
-5. **DFlow API key.** **Ask with a clean, neutral question: *"Do you have a DFlow API key?"*** Don't presuppose where the key lives — phrasings like *"do you have it in env?"* or *"is `DFLOW_API_KEY` set?"* nudge the user toward env-var defaults they didn't ask for. Don't assume the user has one just because they mention the `dflow` CLI is configured. Surface the choice; don't silently fall back to env or to dev. It's **one key for everything DFlow** — same `x-api-key` unlocks the Trade API *and* the Metadata API, REST *and* WebSocket. If yes → prod host (`https://prediction-markets-api.dflow.net` REST, `wss://prediction-markets-api.dflow.net/api/v1/ws` WS) with `x-api-key` on every request (REST and the WS upgrade). If no → dev host (`https://dev-prediction-markets-api.dflow.net`, `wss://dev-prediction-markets-api.dflow.net/api/v1/ws`), rate-limited; point them at `https://pond.dflow.net/build/api-key` for a prod key. **When you generate a script, log the resolved host + key-presence at startup** so the user can see which rails they're on.
+5. **DFlow API key.** **Ask with a clean, neutral question: *"Do you have a DFlow API key?"*** Don't presuppose where the key lives — phrasings like *"do you have it in env?"* or *"is `DFLOW_API_KEY` set?"* nudge the user toward env-var defaults they didn't ask for. Don't assume the user has one just because they mention the `dflow` CLI is configured. Surface the choice; don't silently fall back to env or to dev. It's **one key for everything DFlow** — same `x-api-key` unlocks the Trade API *and* the Metadata API, REST *and* WebSocket. If yes → prod host (`https://prediction-markets-api.dflow.net` REST, `wss://prediction-markets-api.dflow.net/api/v1/ws` WS) with `x-api-key` on every request (REST and the WS upgrade). If no → dev host (`https://dev-prediction-markets-api.dflow.net`, `wss://dev-prediction-markets-api.dflow.net/api/v1/ws`), rate-limited; point them at `https://pond.dflow.net/get-started/api-key` for a prod key. **When you generate a script, log the resolved host + key-presence at startup** so the user can see which rails they're on.
 
 **Do NOT ask about:**
 - **RPC, wallet, signing** — this skill is read-only public data.

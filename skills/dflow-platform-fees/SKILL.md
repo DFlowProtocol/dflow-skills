@@ -46,7 +46,7 @@ Dynamic fees are **not available on spot**.
 
 ## Core `/order` parameters
 
-Full param details and encoding → docs MCP, or read the pages directly: [`/build/trading/platform-fees`](https://pond.dflow.net/build/trading/platform-fees), [`/build/recipes/trading/platform-fees`](https://pond.dflow.net/build/recipes/trading/platform-fees).
+Full param details and encoding → docs MCP, or read the pages directly: [`/spot/trading/platform-fees`](https://pond.dflow.net/spot/trading/platform-fees), [`/spot/recipes/platform-fees`](https://pond.dflow.net/spot/recipes/platform-fees).
 
 - `platformFeeBps` — fixed fee in bps. Works everywhere.
 - `platformFeeScale` — dynamic fee coefficient. PM outcome tokens only.
@@ -57,11 +57,8 @@ Full param details and encoding → docs MCP, or read the pages directly: [`/bui
 
 | Trade type | Allowed `platformFeeMode` |
 |---|---|
-| Imperative spot | `inputMint` **or** `outputMint` |
-| Declarative spot | `outputMint` only |
+| Spot | `inputMint` **or** `outputMint` |
 | PM outcome-token trades | Always settlement mint (USDC / CASH), regardless of what you pass |
-
-Easy trap when porting from imperative to declarative: `inputMint` mode silently becomes invalid.
 
 ## Fee accounts (ATAs)
 
@@ -76,8 +73,7 @@ For PM: the fee ATA must be a settlement-mint ATA (USDC or CASH), since that's t
 1. **Which trade types do you want to collect fees on — spot, PM outcome tokens, or both?** Scopes which fee model(s) are relevant: spot-only → `platformFeeBps` only; PM → either; both → usually `platformFeeBps` on spot + `platformFeeScale` on PM (per-request choice).
 2. **Rate** — bps value for fixed; `k` value for dynamic.
 3. **Collection token(s)** — which token(s) do you want the fee paid in, and do you already have a matching ATA owned by the builder wallet?
-4. **Imperative or declarative?** Only matters for spot and only matters for `platformFeeMode` — declarative can only fee in `outputMint`.
-5. **DFlow API key.** Platform fees are an HTTP-only feature (params on the user's own `/order` call) — there's no CLI flag for them, so you're always plumbing the key into the script's HTTP client. **Ask with a clean, neutral question: *"Do you have a DFlow API key?"*** Don't presuppose where the key lives — phrasings like *"do you have it in env?"* or *"is `DFLOW_API_KEY` set?"* nudge the user toward env-var defaults they didn't ask for. Surface the choice; don't silently fall back to env or to dev. It's **one DFlow key everywhere** — same `x-api-key` unlocks Trade API + Metadata API, REST + WebSocket. Yes → prod `https://quote-api.dflow.net` + `x-api-key`. No → dev `https://dev-quote-api.dflow.net`, rate-limited. Pointer: `https://pond.dflow.net/build/api-key`.
+4. **DFlow API key.** Platform fees are an HTTP-only feature (params on the user's own `/order` call) — there's no CLI flag for them, so you're always plumbing the key into the script's HTTP client. **Ask with a clean, neutral question: *"Do you have a DFlow API key?"*** Don't presuppose where the key lives — phrasings like *"do you have it in env?"* or *"is `DFLOW_API_KEY` set?"* nudge the user toward env-var defaults they didn't ask for. Surface the choice; don't silently fall back to env or to dev. It's **one DFlow key everywhere** — same `x-api-key` unlocks Trade API + Metadata API, REST + WebSocket. Yes → prod `https://quote-api.dflow.net` + `x-api-key`. No → dev `https://dev-quote-api.dflow.net`, rate-limited. Pointer: `https://pond.dflow.net/get-started/api-key`.
 
 **Do NOT ask about:**
 - RPC, signing, slippage — orthogonal to fees; the base trading skill handles them.
@@ -88,7 +84,6 @@ For PM: the fee ATA must be a settlement-mint ATA (USDC or CASH), since that's t
 - **Don't set `platformFeeBps` if you're not collecting.** The API factors a declared fee into slippage tolerance; if the fee isn't actually taken onchain, the slippage budget gets "spent" on nothing and user pricing worsens. Only pass a nonzero value when there's a real `feeAccount` at the other end.
 - **Redemption is fee-exempt under dynamic fees.** `platformFeeScale` returns 0 at `p = 1`. There's no "take a cut on redemption" knob.
 - **Dynamic fees are outcome-token trades only.** `platformFeeScale` is not supported on spot. Use `platformFeeBps` there.
-- **Declarative spot fees can only be in `outputMint`.** Imperative has both modes; declarative narrows. Easy regression.
 - **PM fees are always in the settlement mint.** Passing `platformFeeMode: "inputMint"` on a PM buy doesn't mean "collect in USDC because USDC is the input" — it's silently invalid. The fee settles in USDC/CASH regardless because that's the settlement mint.
 - **`feeAccount` must exist before the trade.** DFlow doesn't create it for you. If it's missing, the trade fails.
 - **One ATA per collected token.** USDC fee account ≠ SOL fee account ≠ CASH fee account. Create what you need upfront.
@@ -99,13 +94,13 @@ For PM: the fee ATA must be a settlement-mint ATA (USDC or CASH), since that's t
 Two different things that both use the word "fee":
 
 - **Platform fees** (this skill) — builder→user. Defined by the builder via `/order` params, transferred to the builder's `feeAccount` on success. Applies to any trade type.
-- **DFlow PM trading fees + rebates** — builder→DFlow, with a partial VIP rebate flow back from DFlow→builder. Charged on **prediction-market outcome-token trades only** (formula `roundup(0.07 × c × p × (1 − p)) + (0.01 × c × p × (1 − p))`), tiered by rolling 30-day PM volume (Frost / Glacier / Steel / Obsidian). Builders above $100k/30D volume may additionally qualify for the VIP rebate schedule. Details: [`/build/prediction-markets/prediction-market-fees`](https://pond.dflow.net/build/prediction-markets/prediction-market-fees).
+- **DFlow PM trading fees + rebates** — builder→DFlow, with a partial VIP rebate flow back from DFlow→builder. Charged on **prediction-market outcome-token trades only** (formula `roundup(0.07 × c × p × (1 − p)) + (0.01 × c × p × (1 − p))`), tiered by rolling 30-day PM volume (Frost / Glacier / Steel / Obsidian). Builders above $100k/30D volume may additionally qualify for the VIP rebate schedule. Details: [`/prediction-markets/prediction-market-fees`](https://pond.dflow.net/prediction-markets/prediction-market-fees).
 
 Don't mix them up when calculating net economics. Platform fees on a spot trade are just a line item between user and builder — DFlow isn't in that loop.
 
 ## When something doesn't fit
 
-Defer to the docs MCP for exact parameter encoding, the code recipe at [`/build/recipes/trading/platform-fees`](https://pond.dflow.net/build/recipes/trading/platform-fees) (runnable, covers both `platformFeeBps` and `platformFeeScale`), and the FAQ entries on slippage interaction.
+Defer to the docs MCP for exact parameter encoding, the code recipe at [`/spot/recipes/platform-fees`](https://pond.dflow.net/spot/recipes/platform-fees) (runnable, covers both `platformFeeBps` and `platformFeeScale`), and the FAQ entries on slippage interaction.
 
 ## Sibling skills
 

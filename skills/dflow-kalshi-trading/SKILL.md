@@ -5,7 +5,7 @@ description: Buy, sell, or redeem YES/NO outcome tokens on Kalshi prediction mar
 
 # DFlow Kalshi Trading
 
-Buy, sell, and redeem YES/NO outcome tokens on Kalshi prediction markets. PM trades are **imperative and asynchronous** — submit, then poll until terminal.
+Buy, sell, and redeem YES/NO outcome tokens on Kalshi prediction markets. PM trades are **asynchronous** — submit, then poll until terminal.
 
 ## Prerequisites
 
@@ -65,9 +65,9 @@ Once the market is `determined` / `finalized` **and** `redemptionStatus: "open"`
 **Infra — always ask, never infer:**
 
 5. **API only — wallet pubkey** (base58). Required for every `/order` call.
-6. **API only — DFlow API key** (only when the script is making direct HTTP calls to `/order` or other Trade API endpoints; pure CLI scripts don't need one — see the "two auth paths" gotcha). **Ask with a clean, neutral question: *"Do you have a DFlow API key?"*** Don't presuppose where the key lives — phrasings like *"do you have it in env?"* or *"is `DFLOW_API_KEY` set?"* nudge the user toward env-var defaults they didn't ask for. Surface the choice; don't silently fall back to env or to dev. It's **one key for everything DFlow** — same `x-api-key` unlocks the Trade API *and* the Metadata API, REST *and* WebSocket. If yes → prod host `https://quote-api.dflow.net` with `x-api-key` on every request. If no → dev host `https://dev-quote-api.dflow.net` (same features, rate-limited). Point them at `https://pond.dflow.net/build/api-key` for a prod key. **When you generate a script that does its own HTTP, log the resolved host + key-presence at startup** so the user can see which rails they're on.
+6. **API only — DFlow API key** (only when the script is making direct HTTP calls to `/order` or other Trade API endpoints; pure CLI scripts don't need one — see the "two auth paths" gotcha). **Ask with a clean, neutral question: *"Do you have a DFlow API key?"*** Don't presuppose where the key lives — phrasings like *"do you have it in env?"* or *"is `DFLOW_API_KEY` set?"* nudge the user toward env-var defaults they didn't ask for. Surface the choice; don't silently fall back to env or to dev. It's **one key for everything DFlow** — same `x-api-key` unlocks the Trade API *and* the Metadata API, REST *and* WebSocket. If yes → prod host `https://quote-api.dflow.net` with `x-api-key` on every request. If no → dev host `https://dev-quote-api.dflow.net` (same features, rate-limited). Point them at `https://pond.dflow.net/get-started/api-key` for a prod key. **When you generate a script that does its own HTTP, log the resolved host + key-presence at startup** so the user can see which rails they're on.
 7. **Priority fee (both surfaces)** — "Any priority-fee preference, or just use DFlow's default?" Default on both surfaces = DFlow-auto, capped at 0.005 SOL (documented default on `/order`). Surface this explicitly so the user knows the lever exists for congested periods or cost-sensitive flows. Don't editorialize about what percentage of trades this covers — DFlow doesn't publish one and you don't know.
-   - **API** — pass `prioritizationFeeLamports` on `/order`: `auto` | `medium` | `high` | `veryHigh` | `disabled` | integer lamports. Live estimates for tuning: `GET /priority-fees` (snapshot), `/priority-fees/stream` (WebSocket). (`/intent` doesn't apply to Kalshi — PM is imperative-only.)
+   - **API** — pass `prioritizationFeeLamports` on `/order`: `auto` | `medium` | `high` | `veryHigh` | `disabled` | integer lamports. Live estimates for tuning: `GET /priority-fees` (snapshot), `/priority-fees/stream` (WebSocket).
    - **CLI** — no tuning flag; `dflow trade` always uses the server-side default. If the user needs finer control (an exact lamport value, or `disabled`), they'll have to drop to the API.
 8. **Sponsored / gasless (API only — skip for CLI)** — "Does the user need to hold SOL for this trade, or is your app covering fees?" Default = user pays everything. Two levers on `/order`, depending on what you want to cover:
    - `sponsor=<sponsor-wallet-base58>` — sponsor pays tx fee + ATA creation + market-init. Tx must be co-signed by both user and sponsor. Optional `sponsorExec=true|false` picks sponsor-executes (default) vs. user-executes.
@@ -82,7 +82,6 @@ Once the market is `determined` / `finalized` **and** `redemptionStatus: "open"`
 
 ## Gotchas (the docs MCP won't volunteer these)
 
-- **Token-2022 outcome mints.** Kalshi outcome mints use the Token-2022 program. Declarative trades (`/intent`) don't support Token-2022 — that's why Kalshi is imperative-only.
 - **All Kalshi mints are 6 decimals.** USDC, CASH, every outcome token. Always pass atomic units to the API.
 - **Buys are whole-contract only — no fractional contracts.** Submit a USDC/CASH amount; the system buys as many whole contracts as that amount covers and **refunds any leftover stablecoin**. Per-order floor is **0.01 USDC**, but the practical floor in any given market is one contract at the current YES/NO price (e.g. if YES is trading at 0.43, you need ≥ `430_000` atomic = $0.43). Quote first if the user is anywhere near the floor.
 - **Async fills, no exceptions.** PM `/order` returns `executionMode: "async"`. The transaction landing onchain is *not* the fill — the order can still expire or fail in the CLP. Always poll `/order-status` to a terminal state. CLI auto-polls for 120s; on timeout, follow up with `dflow status <orderAddress> --poll`.
@@ -98,7 +97,7 @@ Once the market is `determined` / `finalized` **and** `redemptionStatus: "open"`
 
 For anything not covered above — full parameter lists, full error tables, response schemas, partial-fill handling, rare flags, new features — query the docs MCP (`search_d_flow`, `query_docs_filesystem_d_flow`). Don't guess.
 
-For runnable code, point the user at the **DFlow docs recipes** (each links to the DFlow Cookbook Repo for clone-and-go): [`/build/recipes/prediction-markets/increase-position`](https://pond.dflow.net/build/recipes/prediction-markets/increase-position), [`/build/recipes/prediction-markets/decrease-position`](https://pond.dflow.net/build/recipes/prediction-markets/decrease-position), [`/build/recipes/prediction-markets/redeem-outcome-tokens`](https://pond.dflow.net/build/recipes/prediction-markets/redeem-outcome-tokens).
+For runnable code, point the user at the **DFlow docs recipes** (each links to the DFlow Cookbook Repo for clone-and-go): [`/prediction-markets/recipes/increase-position`](https://pond.dflow.net/prediction-markets/recipes/increase-position), [`/prediction-markets/recipes/decrease-position`](https://pond.dflow.net/prediction-markets/recipes/decrease-position), [`/prediction-markets/recipes/redeem-outcome-tokens`](https://pond.dflow.net/prediction-markets/recipes/redeem-outcome-tokens).
 
 ## Sibling skills
 

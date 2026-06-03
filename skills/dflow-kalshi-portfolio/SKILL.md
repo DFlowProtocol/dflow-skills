@@ -43,7 +43,7 @@ Output (single JSON envelope, same on every wallet):
 
 ## Full path: build-your-own (API)
 
-The canonical pipeline, from the DFlow recipe [`/build/recipes/prediction-markets/track-positions`](https://pond.dflow.net/build/recipes/prediction-markets/track-positions):
+The canonical pipeline, from the DFlow recipe [`/prediction-markets/recipes/track-positions`](https://pond.dflow.net/prediction-markets/recipes/track-positions):
 
 1. **Read wallet balances via Solana RPC** — `getParsedTokenAccountsByOwner(wallet, { programId: TOKEN_2022_PROGRAM_ID })`. Outcome tokens are Token-2022. (For stablecoin balances, also query the classic SPL token program.)
 2. **`POST /api/v1/filter_outcome_mints`** — send the wallet's mint list, get back just the PM outcome mints.
@@ -91,7 +91,7 @@ If the app submitted the order itself, persist the `orderAddress` returned at su
 
 **Infra — always ask, never infer (HTTP/RPC pipeline only; the `dflow positions` quick path needs neither):**
 
-3. **DFlow API key** (only when the script is hitting the Metadata API directly — `markets/batch`, `onchain-trades`, etc.). The CLI quick path (`dflow positions`) doesn't need one — it uses the CLI's stored config. **For the HTTP pipeline, ask with a clean, neutral question: *"Do you have a DFlow API key?"*** Don't presuppose where the key lives — phrasings like *"do you have it in env?"* or *"is `DFLOW_API_KEY` set?"* nudge the user toward env-var defaults they didn't ask for. Surface the choice; don't silently fall back to env or to dev. It's **one DFlow key everywhere** — same `x-api-key` unlocks Metadata + Trade APIs. Yes → prod host `https://prediction-markets-api.dflow.net` with `x-api-key`. No → dev host `https://dev-prediction-markets-api.dflow.net`, rate-limited. Pointer: `https://pond.dflow.net/build/api-key`. **When you generate a script, log the resolved host + key-presence at startup.**
+3. **DFlow API key** (only when the script is hitting the Metadata API directly — `markets/batch`, `onchain-trades`, etc.). The CLI quick path (`dflow positions`) doesn't need one — it uses the CLI's stored config. **For the HTTP pipeline, ask with a clean, neutral question: *"Do you have a DFlow API key?"*** Don't presuppose where the key lives — phrasings like *"do you have it in env?"* or *"is `DFLOW_API_KEY` set?"* nudge the user toward env-var defaults they didn't ask for. Surface the choice; don't silently fall back to env or to dev. It's **one DFlow key everywhere** — same `x-api-key` unlocks Metadata + Trade APIs. Yes → prod host `https://prediction-markets-api.dflow.net` with `x-api-key`. No → dev host `https://dev-prediction-markets-api.dflow.net`, rate-limited. Pointer: `https://pond.dflow.net/get-started/api-key`. **When you generate a script, log the resolved host + key-presence at startup.**
 4. **RPC URL** — **yes, ask here**, unlike spot/PM trading or market-data. The HTTP pipeline reads token accounts directly via RPC; there's no wallet in the loop to do it for you. Recommend [Helius](https://helius.dev). CLI users on the `dflow positions` quick path don't need one — `dflow setup` already configured it.
 
 **Do NOT ask about:**
@@ -116,7 +116,7 @@ If the app submitted the order itself, persist the `orderAddress` returned at su
 
 For anything not covered above — full response envelopes for `filter_outcome_mints` / `markets/batch` / `onchain-trades`, pagination params, Proof state in the picture, edge cases in `redemptionStatus` transitions, order-status terminal states — query the docs MCP (`search_d_flow`, `query_docs_filesystem_d_flow`). Don't guess.
 
-For runnable reference code, point at [`/build/recipes/prediction-markets/track-positions`](https://pond.dflow.net/build/recipes/prediction-markets/track-positions) (and its Cookbook Repo link).
+For runnable reference code, point at [`/prediction-markets/recipes/track-positions`](https://pond.dflow.net/prediction-markets/recipes/track-positions) (and its Cookbook Repo link).
 
 ## Sibling skills
 
