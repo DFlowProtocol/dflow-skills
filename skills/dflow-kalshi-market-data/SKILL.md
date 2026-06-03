@@ -13,7 +13,7 @@ Pull data about a **known** Kalshi market (or set of markets) — orderbook, tra
 
 ## Surface
 
-All data endpoints in this skill run against the **Metadata API** (`https://pond.dflow.net/resources/metadata-api`) — REST for snapshots and history, WebSockets for live streams. Call it from anywhere: a `curl` from the command line, a Node/Python script, a cron job, a backend, or a Next.js proxy fronting a browser UI.
+All data endpoints in this skill run against the **Metadata API** (`https://pond.dflow.net/resources/metadata-api/introduction`) — REST for snapshots and history, WebSockets for live streams. Call it from anywhere: a `curl` from the command line, a Node/Python script, a cron job, a backend, or a Next.js proxy fronting a browser UI.
 
 If the user says "run this from my terminal", **don't reach for the `dflow` CLI** — it has no market-data subcommands. Write a short HTTP/WS script against the Metadata API instead.
 
