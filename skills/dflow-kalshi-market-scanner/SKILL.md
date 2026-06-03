@@ -13,7 +13,7 @@ Find Kalshi markets that match a **criterion**. This skill is a set of named **s
 
 ## Surface
 
-All scans here run against the **Metadata API** (`https://pond.dflow.net/resources/metadata-api`) — REST for point-in-time queries, WebSockets for continuous streams. You can call both from anywhere: a quick `curl` from the command line, a Node/Python script, a cron job, a backend service, or a Next.js route proxying a browser UI.
+All scans here run against the **Metadata API** (`https://pond.dflow.net/resources/metadata-api/introduction`) — REST for point-in-time queries, WebSockets for continuous streams. You can call both from anywhere: a quick `curl` from the command line, a Node/Python script, a cron job, a backend service, or a Next.js route proxying a browser UI.
 
 If the user says "run this from my terminal", **don't reach for the `dflow` CLI** — it has no discovery subcommands. Write a short HTTP/WS script that hits the Metadata API instead.
 

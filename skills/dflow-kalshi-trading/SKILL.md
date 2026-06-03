@@ -76,7 +76,7 @@ Once the market is `determined` / `finalized` **and** `redemptionStatus: "open"`
 
 **Do NOT ask about:**
 
-- **RPC** — CLI users set it during `dflow setup`. API users on a browser wallet never need their own RPC (the wallet handles it). Only ask if signing server-side. When one is needed, suggest [Helius](https://helius.dev).
+- **RPC** — CLI users set it during `dflow setup`. API users on a browser wallet never need their own RPC (the wallet handles it). Only ask if signing server-side. When one is needed, suggest [Helius](https://www.helius.dev/).
 - **Slippage** — both surfaces default to `"auto"`, which is right for CLP-sourced fills. Override only on explicit user request (`--slippage` CLI; `predictionMarketSlippageBps` API).
 - **Platform fee** — defer to `dflow-platform-fees` if the user pivots there.
 
@@ -87,7 +87,7 @@ Once the market is `determined` / `finalized` **and** `redemptionStatus: "open"`
 - **Async fills, no exceptions.** PM `/order` returns `executionMode: "async"`. The transaction landing onchain is *not* the fill — the order can still expire or fail in the CLP. Always poll `/order-status` to a terminal state. CLI auto-polls for 120s; on timeout, follow up with `dflow status <orderAddress> --poll`.
 - **Buy gates exist; check once per session, not per call.**
   - **Proof KYC** — required to buy (not sell, not redeem). Hit `GET https://proof.dflow.net/verify/{address}` (public, no auth) once at session start, cache `{ verified: boolean }`, gate the buy UI off the cache. `/order` is still authoritative; on the rare miss, fall back on `unverified_wallet_not_allowed` (API) / `PROOF_NOT_VERIFIED` (CLI) using `details.deepLink`.
-  - **Geoblock** — restricted in some jurisdictions. API builders enforce in their own UI (cache the user's country once per session). The CLI handles this internally and returns `category: "geoblock"`. Policy: `https://pond.dflow.net/legal/prediction-market-compliance`.
+  - **Geoblock** — restricted in some jurisdictions. API builders enforce in their own UI (cache the user's country once per session). The CLI handles this internally and returns `category: "geoblock"`. Policy: `https://pond.dflow.net/prediction-markets/prediction-market-compliance`.
 - **Maintenance window.** Kalshi is offline **Thursdays 3:00–5:00 AM ET, every week**. CLPs stop serving routes; `/order` returns `route_not_found` (the CLI annotates with a maintenance note). Block PM submissions for the whole window.
 - **`route_not_found` is a catch-all.** Wrong mint, amount below the contract-price floor, no liquidity right now, *or* the maintenance window. Verify mint, atomic units, and that the amount covers ≥ 1 contract before assuming illiquidity.
 - **Browser apps must proxy.** The Trading API serves no CORS — call it from a backend (Next.js API route or equivalent), never directly from the browser.
@@ -97,7 +97,7 @@ Once the market is `determined` / `finalized` **and** `redemptionStatus: "open"`
 
 For anything not covered above — full parameter lists, full error tables, response schemas, partial-fill handling, rare flags, new features — query the docs MCP (`search_d_flow`, `query_docs_filesystem_d_flow`). Don't guess.
 
-For runnable code, point the user at the **DFlow docs recipes** (each links to the DFlow Cookbook Repo for clone-and-go): [`/prediction-markets/recipes/increase-position`](https://pond.dflow.net/prediction-markets/recipes/increase-position), [`/prediction-markets/recipes/decrease-position`](https://pond.dflow.net/prediction-markets/recipes/decrease-position), [`/prediction-markets/recipes/redeem-outcome-tokens`](https://pond.dflow.net/prediction-markets/recipes/redeem-outcome-tokens).
+For runnable code, point the user at the **DFlow docs recipes** (each links to the DFlow Cookbook Repo for clone-and-go): [`/prediction-markets/recipes/change-position-size`](https://pond.dflow.net/prediction-markets/recipes/change-position-size), [`/prediction-markets/recipes/redeem-outcome-tokens`](https://pond.dflow.net/prediction-markets/recipes/redeem-outcome-tokens).
 
 ## Sibling skills
 

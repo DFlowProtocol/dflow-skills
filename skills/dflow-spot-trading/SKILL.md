@@ -78,7 +78,7 @@ await connection.confirmTransaction(                         // app's RPC (reads
 
 **Do NOT ask about:**
 
-- **RPC** — CLI users set it during `dflow setup`. Browser wallet-adapter apps using `wallet.sendTransaction(tx, connection)` don't need their own RPC for the broadcast — the wallet handles it (see the broadcast-path Gotcha). Only ask when signing server-side (Node + `Keypair`) or when the app is explicitly going low-level with `connection.sendRawTransaction` in the browser. When one is needed, suggest [Helius](https://helius.dev).
+- **RPC** — CLI users set it during `dflow setup`. Browser wallet-adapter apps using `wallet.sendTransaction(tx, connection)` don't need their own RPC for the broadcast — the wallet handles it (see the broadcast-path Gotcha). Only ask when signing server-side (Node + `Keypair`) or when the app is explicitly going low-level with `connection.sendRawTransaction` in the browser. When one is needed, suggest [Helius](https://www.helius.dev/).
 - **Slippage** — both surfaces default to `"auto"`. Override only on explicit user request (`--slippage` CLI; `slippageBps` API).
 - **Platform fee, DEX inclusion/exclusion, route length, Jito bundles, direct-only routes** — defaults are right for typical swaps; only surface these knobs on explicit user need. For platform fees specifically, defer to `dflow-platform-fees` if the user pivots there.
 
