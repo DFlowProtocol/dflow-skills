@@ -1,8 +1,8 @@
 # DFlow Skills
 
-A collection of [Claude Code Skills](https://docs.claude.com/en/docs/claude-code/skills) for working with [DFlow](https://dflow.net) — Solana spot trading, Kalshi prediction markets, Proof KYC, and adjacent monetization / fee / sponsorship surfaces.
+A collection of [Claude Code Skills](https://docs.claude.com/en/docs/claude-code/skills) for working with [DFlow](https://dflow.net) — Solana spot trading, Kalshi prediction markets, Proof KYC, and adjacent monetization / fee / sponsorship surfaces — plus an [Alchemy](https://www.alchemy.com/) skill for the blockchain data, RPC, and infrastructure that complements those trading flows.
 
-Each skill is a focused recipe, a single `SKILL.md` that captures the workflow, decisions, and gotchas an agent needs to use DFlow well. The skills are deliberately light: for endpoint shapes, parameter details, and error codes they defer to the **DFlow docs MCP**, and for runnable code examples they point at the **DFlow docs recipes pages** under each product (e.g., `https://pond.dflow.net/prediction-markets/recipes/quickstart`, `https://pond.dflow.net/spot/recipes/quickstart`). Each recipe page links to the DFlow Cookbook Repo for clone-and-go usage.
+Each skill is a focused recipe, a single `SKILL.md` that captures the workflow, decisions, and gotchas an agent needs to use DFlow well. The skills are deliberately light: for endpoint shapes, parameter details, and error codes they defer to the **DFlow docs MCP** (and, for the Alchemy skill, the **[Alchemy docs](https://www.alchemy.com/docs)**), and for runnable code examples they point at the **DFlow docs recipes pages** under each product (e.g., `https://pond.dflow.net/prediction-markets/recipes/quickstart`, `https://pond.dflow.net/spot/recipes/quickstart`). Each recipe page links to the DFlow Cookbook Repo for clone-and-go usage.
 
 ## Install
 
@@ -24,6 +24,9 @@ The `skills` [CLI](https://github.com/vercel-labs/skills) is interactive, it det
 | [`dflow-kalshi-portfolio`](skills/dflow-kalshi-portfolio/SKILL.md)           | View open positions, unrealized P&L, and reclaim rent from empty outcome accounts.     |
 | [`dflow-proof-kyc`](skills/dflow-proof-kyc/SKILL.md)                         | Integrate Proof identity verification so wallets can buy on Kalshi.                    |
 | [`dflow-platform-fees`](skills/dflow-platform-fees/SKILL.md)                 | Take a builder cut on swaps and PM trades (`platformFeeBps`, `platformFeeScale`).      |
+| [`dflow-alchemy`](skills/dflow-alchemy/SKILL.md)                             | Query and integrate Alchemy blockchain APIs (EVM + Solana) — balances, NFTs, transfers, prices, portfolio, simulation, RPC. API-key or keyless x402/MPP gateway. |
+
+> `dflow-alchemy` distills [alchemyplatform/skills](https://github.com/alchemyplatform/skills/tree/main/skills) into a single DFlow-style recipe — it complements the Solana trading skills with general blockchain data, RPC, and infrastructure access, and defers field-level reference to the [Alchemy docs](https://www.alchemy.com/docs).
 
 
 ## Recommended: install the DFlow docs MCP
@@ -104,6 +107,7 @@ Honest disclosure, since the `npx skills` install flow flags the trading skills 
 skills/
   dflow-spot-trading/SKILL.md
   dflow-kalshi-trading/SKILL.md
+  dflow-alchemy/SKILL.md
   ... (one folder per skill, each just a SKILL.md)
 ```
 
