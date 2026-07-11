@@ -1,6 +1,6 @@
 ---
 name: dflow-spot-trading
-description: Swap any pair of Solana tokens via DFlow. Use when the user wants to trade, swap, or convert tokens on Solana, get a price quote, build a swap UI, tune priority fees so a swap lands under congestion, or build a gasless / sponsored swap where the app pays fees. Covers both the `dflow` CLI and the DFlow Trading API. Do NOT use for Kalshi prediction-market YES/NO trades or builder-side platform fees.
+description: Swap any pair of Solana tokens via DFlow. Use when the user wants to trade, swap, or convert tokens on Solana, get a price quote, build a swap UI, tune priority fees so a swap lands under congestion, or build a gasless / sponsored swap where the app pays fees. Covers both the `dflow` CLI and the DFlow Trading API. Do NOT use for builder-side platform fees.
 ---
 
 # DFlow Spot Trading
@@ -105,5 +105,4 @@ For runnable code, point the user at the **DFlow docs recipes** (each links to t
 
 Defer if the user pivots to:
 
-- `dflow-kalshi-trading` — Kalshi prediction-market YES/NO trades
 - `dflow-platform-fees` — charge a builder cut on swaps
