@@ -1,8 +1,8 @@
 # DFlow Skills
 
-A collection of [Claude Code Skills](https://docs.claude.com/en/docs/claude-code/skills) for working with [DFlow](https://dflow.net) — Solana spot trading, Kalshi prediction markets, Proof KYC, and adjacent monetization / fee / sponsorship surfaces.
+A collection of [Claude Code Skills](https://docs.claude.com/en/docs/claude-code/skills) for working with [DFlow](https://dflow.net) — Solana spot trading and adjacent monetization / fee / sponsorship surfaces.
 
-Each skill is a focused recipe, a single `SKILL.md` that captures the workflow, decisions, and gotchas an agent needs to use DFlow well. The skills are deliberately light: for endpoint shapes, parameter details, and error codes they defer to the **DFlow docs MCP**, and for runnable code examples they point at the **DFlow docs recipes pages** under each product (e.g., `https://pond.dflow.net/prediction-markets/recipes/quickstart`, `https://pond.dflow.net/spot/recipes/quickstart`). Each recipe page links to the DFlow Cookbook Repo for clone-and-go usage.
+Each skill is a focused recipe, a single `SKILL.md` that captures the workflow, decisions, and gotchas an agent needs to use DFlow well. The skills are deliberately light: for endpoint shapes, parameter details, and error codes they defer to the **DFlow docs MCP**, and for runnable code examples they point at the **DFlow docs recipes pages** under each product (e.g., `https://pond.dflow.net/spot/recipes/quickstart`). Each recipe page links to the DFlow Cookbook Repo for clone-and-go usage.
 
 ## Install
 
@@ -18,12 +18,7 @@ The `skills` [CLI](https://github.com/vercel-labs/skills) is interactive, it det
 | Skill                                                               | What it does                                                                           |
 | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | [`dflow-spot-trading`](skills/dflow-spot-trading/SKILL.md)                   | Swap any pair of Solana tokens via DFlow CLI or Trading API.                           |
-| [`dflow-kalshi-trading`](skills/dflow-kalshi-trading/SKILL.md)               | Buy, sell, and redeem YES/NO outcome tokens on Kalshi prediction markets.              |
-| [`dflow-kalshi-market-scanner`](skills/dflow-kalshi-market-scanner/SKILL.md) | Discover and filter Kalshi events, markets, series, tags, and historical candlesticks. |
-| [`dflow-kalshi-market-data`](skills/dflow-kalshi-market-data/SKILL.md)       | Real-time orderbook, trade, and live-data streams for Kalshi markets.                  |
-| [`dflow-kalshi-portfolio`](skills/dflow-kalshi-portfolio/SKILL.md)           | View open positions, unrealized P&L, and reclaim rent from empty outcome accounts.     |
-| [`dflow-proof-kyc`](skills/dflow-proof-kyc/SKILL.md)                         | Integrate Proof identity verification so wallets can buy on Kalshi.                    |
-| [`dflow-platform-fees`](skills/dflow-platform-fees/SKILL.md)                 | Take a builder cut on swaps and PM trades (`platformFeeBps`, `platformFeeScale`).      |
+| [`dflow-platform-fees`](skills/dflow-platform-fees/SKILL.md)                 | Take a builder cut on swaps (`platformFeeBps`).                                         |
 
 
 ## Recommended: install the DFlow docs MCP
@@ -72,7 +67,7 @@ Add it as a Connector under Settings → Connectors using the URL above.
 
 ## Recommended: install the `dflow` CLI
 
-Skills that cover the CLI surface (spot trading, Kalshi trading, portfolio, etc.) assume `dflow` is available on `PATH`. If it isn't, the skill will tell the agent to install it:
+Skills that cover the CLI surface (spot trading, etc.) assume `dflow` is available on `PATH`. If it isn't, the skill will tell the agent to install it:
 
 ```bash
 curl -fsS https://cli.dflow.net | sh
@@ -103,7 +98,7 @@ Honest disclosure, since the `npx skills` install flow flags the trading skills 
 ```
 skills/
   dflow-spot-trading/SKILL.md
-  dflow-kalshi-trading/SKILL.md
+  dflow-platform-fees/SKILL.md
   ... (one folder per skill, each just a SKILL.md)
 ```
 
