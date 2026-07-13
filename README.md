@@ -17,8 +17,8 @@ The `skills` [CLI](https://github.com/vercel-labs/skills) is interactive, it det
 
 | Skill                                                               | What it does                                                                           |
 | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| [`dflow-spot-trading`](skills/dflow-spot-trading/SKILL.md)                   | Swap any pair of Solana tokens via DFlow CLI or Trading API.                           |
-| [`dflow-platform-fees`](skills/dflow-platform-fees/SKILL.md)                 | Take a builder cut on swaps (`platformFeeBps`).                                         |
+| [`dflow-spot-trading`](skills/dflow-spot-trading/SKILL.md)                   | Swap any pair of Solana tokens via DFlow CLI or Trading API (incl. builder platform fees). |
+| [`dflow-market-data`](skills/dflow-market-data/SKILL.md)                     | Stream live quotes, order-book depth, and priority fees over WebSocket.                 |
 
 
 ## Recommended: install the DFlow docs MCP
@@ -98,7 +98,7 @@ Honest disclosure, since the `npx skills` install flow flags the trading skills 
 ```
 skills/
   dflow-spot-trading/SKILL.md
-  dflow-platform-fees/SKILL.md
+  dflow-market-data/SKILL.md
   ... (one folder per skill, each just a SKILL.md)
 ```
 

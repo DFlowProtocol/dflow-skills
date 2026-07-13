@@ -1,6 +1,6 @@
 ---
 name: dflow-spot-trading
-description: Swap any pair of Solana tokens via DFlow. Use when the user wants to trade, swap, or convert tokens on Solana, get a price quote, build a swap UI, tune priority fees so a swap lands under congestion, or build a gasless / sponsored swap where the app pays fees. Covers both the `dflow` CLI and the DFlow Trading API. Do NOT use for builder-side platform fees.
+description: Swap any pair of Solana tokens via DFlow. Use when the user wants to trade, swap, or convert tokens on Solana, get a price quote, build a swap UI, tune priority fees so a swap lands under congestion, build a gasless / sponsored swap where the app pays fees, or take a builder platform fee on swaps. Covers both the `dflow` CLI and the DFlow Trading API. For live prices / streaming order book / depth, use `dflow-market-data` instead.
 ---
 
 # DFlow Spot Trading
@@ -80,7 +80,8 @@ await connection.confirmTransaction(                         // app's RPC (reads
 
 - **RPC** — CLI users set it during `dflow setup`. Browser wallet-adapter apps using `wallet.sendTransaction(tx, connection)` don't need their own RPC for the broadcast — the wallet handles it (see the broadcast-path Gotcha). Only ask when signing server-side (Node + `Keypair`) or when the app is explicitly going low-level with `connection.sendRawTransaction` in the browser. When one is needed, suggest [Helius](https://helius.dev).
 - **Slippage** — both surfaces default to `"auto"`. Override only on explicit user request (`--slippage` CLI; `slippageBps` API).
-- **Platform fee, DEX inclusion/exclusion, route length, Jito bundles, direct-only routes** — defaults are right for typical swaps; only surface these knobs on explicit user need. For platform fees specifically, defer to `dflow-platform-fees` if the user pivots there.
+- **DEX inclusion/exclusion, route length, Jito bundles, direct-only routes** — defaults are right for typical swaps; only surface these knobs on explicit user need.
+- **Platform fee** — off by default; only relevant if the user is monetizing their own distribution. See the **Platform fees** section below.
 
 ## Gotchas (the docs MCP won't volunteer these)
 
@@ -95,6 +96,21 @@ await connection.confirmTransaction(                         // app's RPC (reads
 - **Onchain failure with slippage logs.** Don't silently bump `slippageBps` on retry — surface to the user.
 - **CLI shell-outs authenticate themselves; direct HTTP calls don't.** If your script or backend shells out to `dflow trade`, that leg uses the CLI's stored config from `dflow setup` (key, wallet, RPC) — **you plumb nothing** for CLI invocations. If the same script *also* hits the Trade API or Metadata API directly over HTTP (e.g. scanner-style discovery, your own `/order` call, `/quote`), that HTTP client needs the key handed in explicitly (env var, `.env`, `--api-key` flag, header). The CLI's stored key is not reusable by a sibling HTTP client, and an env-var key is not injected into the CLI either — they're independent plumbing sites for the same DFlow key. **Only ask about an API key for the HTTP portion; pure CLI scripts don't need one.**
 
+## Platform fees (builder cut)
+
+Collect a fee on swaps your app routes, paid to a **builder-controlled token account** on successful execution. This is the builder→user monetization lever. **API only** — these are `/order` params; the `dflow` CLI has no platform-fee flags, so don't hunt for one.
+
+- `platformFeeBps` — flat fee in basis points (`50` = 0.5%).
+- `platformFeeMode` — which side pays: `outputMint` (default) or `inputMint`.
+- `feeAccount` — the SPL token account that receives the fee. **Must already exist** (DFlow won't create it); you need **one ATA per token you collect in**, owned by the builder wallet. Pass the one matching the mode's token per request.
+
+Gotchas:
+
+- **Don't set `platformFeeBps` unless you're actually collecting.** A declared fee is factored into the slippage budget; a phantom fee (no real `feeAccount` behind it) spends that budget on nothing and worsens the user's price. Only pass a nonzero value with a real fee account at the other end.
+- **Fees apply only on successful trades** — failed/reverted swaps charge nothing. Don't count failures as fee-bearing volume.
+
+Ask the user: fee **rate** (bps), collection **token(s)** (and whether a matching builder-owned ATA already exists). For the full mode matrix and encoding, **load `/spot/trading/platform-fees` now** (docs MCP); runnable example: [`/spot/recipes/platform-fees`](https://pond.dflow.net/spot/recipes/platform-fees).
+
 ## When something doesn't fit
 
 For anything not covered above — full parameter lists, full error tables, legacy `/quote` + `/swap` flow, sponsorship fields, new features — query the docs MCP (`search_d_flow`, `query_docs_filesystem_d_flow`). Don't guess.
@@ -105,4 +121,4 @@ For runnable code, point the user at the **DFlow docs recipes** (each links to t
 
 Defer if the user pivots to:
 
-- `dflow-platform-fees` — charge a builder cut on swaps
+- `dflow-market-data` — stream live prices / order book / depth. Read-only market data; **this skill executes trades, that one displays them.** A "show me the live book / prices" ask belongs there.
