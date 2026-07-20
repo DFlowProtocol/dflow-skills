@@ -17,7 +17,7 @@ All are paths on the DFlow Trade API **WebSocket** host — prod `wss://quote-ap
 | Order book | `/book-stream` | ten levels of depth per side |
 | Priority fees | `/priority-fees/stream` | live priority-fee estimates (no polling) |
 
-> **Access to the quote and book streams is GATED — the user must request access from the DFlow team first.** Without it the upgrade is rejected no matter how correct the code is. Surface this up front so nobody debugs a working integration that's simply un-provisioned.
+> **Access to the quote and book streams is GATED at the API-key level.** A key that works fine for `/order` and the rest of the Trading API is **not** automatically allowed on the streams — the DFlow team has to enable stream access on that specific key. Until they do, the WebSocket upgrade is rejected no matter how correct the code is. Flag this up front: the most confusing failure here is a **valid, working key that the stream still refuses** — that's a permission on the key, not a bug in the integration. Point the user at the team to request stream access.
 
 ## Prerequisites
 
