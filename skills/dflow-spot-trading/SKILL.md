@@ -34,26 +34,24 @@ Single round-trip: get a quote and a signed-ready `VersionedTransaction` togethe
 > Full request/response schema, every param, and the error codes: load `/resources/trading-api/order/order` via the docs MCP (`query_docs_filesystem_d_flow`) — don't guess field names.
 
 - CLI: `dflow trade <atomic-amount> <FROM> <TO>` (add `--confirm` for agents/scripts that need to block until confirmed).
-- API: `GET /order?userPublicKey=&inputMint=&outputMint=&amount=`, deserialize `transaction` (base64) → `VersionedTransaction`, sign + broadcast, confirm against the blockhash DFlow signed with. **Two broadcast idioms — pick the one that matches your context:**
+- API: `GET /order?userPublicKey=&inputMint=&outputMint=&amount=`, deserialize `transaction` (base64) → `VersionedTransaction`, sign + broadcast, then confirm. **Two broadcast idioms — pick the one that matches your context:**
   - **Browser wallet-adapter app (the default for UIs).** `const sig = await wallet.sendTransaction(tx, connection)`. The wallet signs *and* broadcasts through its own RPC — your `connection` only needs to serve reads (`confirmTransaction`).
   - **Node script / server-side signing with a `Keypair`.** Two-step: `tx.sign([keypair])` → `connection.sendRawTransaction(tx.serialize())`. Your RPC is what broadcasts; a public endpoint will 403.
 
   **The full browser-adapter happy path, end to end:**
 
 ```ts
-const { transaction, lastValidBlockHeight } = await fetch("/api/order?...").then(r => r.json());
+const { transaction } = await fetch("/api/order?...").then(r => r.json());
 const tx = VersionedTransaction.deserialize(Buffer.from(transaction, "base64"));
 const sig = await sendTransaction(tx, connection);          // wallet's RPC
-await connection.confirmTransaction(                         // app's RPC (reads only)
-  { signature: sig, blockhash: tx.message.recentBlockhash, lastValidBlockHeight },
-  "confirmed",
-);
+const { value } = await connection.confirmTransaction(sig, "confirmed");  // app's RPC (reads only)
+if (value.err) throw new Error(`swap failed: ${JSON.stringify(value.err)}`);
 ```
 
   **Where each `/order` response field goes** (don't re-derive these locally — DFlow owns the authoritative value):
 
   - `transaction` (base64) → `VersionedTransaction.deserialize` → `wallet.sendTransaction` (browser) or `connection.sendRawTransaction` (Node).
-  - `lastValidBlockHeight` → `connection.confirmTransaction`, paired with `tx.message.recentBlockhash` from the deserialized tx. **Never** a fresh `getLatestBlockhash` (see Gotchas).
+  - `lastValidBlockHeight` → available if you use the object form of `connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight })`; the DFlow quickstart just confirms by signature (`confirmTransaction(sig, "confirmed")`).
   - `inAmount` / `outAmount` / `otherAmountThreshold` / `priceImpactPct` / `slippageBps` → display.
   - `prioritizationFeeLamports` / `prioritizationType` → echo / logging. The server-resolved priority-fee choice after `"auto"` resolution.
   - `contextSlot` → logging / staleness checks.
@@ -93,7 +91,6 @@ await connection.confirmTransaction(                         // app's RPC (reads
 - **Browser apps must proxy.** Trading API serves no CORS — call it from a backend (Next.js API route or equivalent), never directly from the browser.
 - **Two broadcast paths in browser apps; pick the right one.** In `@solana/wallet-adapter-react`, `wallet.sendTransaction(tx, connection)` delegates to the wallet's `signAndSendTransaction` — Phantom and most major wallets route the broadcast through their own RPC, so the app's `Connection` only needs to work for reads (`confirmTransaction`). A public `mainnet-beta` endpoint is fine for that. The low-level two-step (`signTransaction(tx)` + `connection.sendRawTransaction(signed.serialize())`) sends through *the app's* RPC — and public endpoints reliably 403 on `sendTransaction`. **Default to `wallet.sendTransaction` in browser apps**; drop to the two-step only when you need to inspect or modify the signed bytes before broadcast. Server-side signing (Node + `Keypair`) is always two-step, because there's no wallet adapter to delegate to — and there you do need a real RPC.
 - **Wire wallets via Wallet Standard auto-discovery, not per-wallet adapters.** Pass `wallets={[]}` to `<WalletProvider>`. Modern Phantom / Solflare / Backpack / Glow / etc. implement the Wallet Standard protocol and are auto-detected at runtime — no explicit adapter instances needed. **Do not** instantiate `new PhantomWalletAdapter()` / `new SolflareWalletAdapter()` from `@solana/wallet-adapter-wallets`; those are pre-Wallet-Standard shims, and the kicker is the `useWallet()` React surface looks identical either way — same `sendTransaction`, same `publicKey`. But underneath, the legacy adapter's `sendTransaction` silently downgrades to `signTransaction` + `connection.sendRawTransaction` through *your* app's RPC, re-introducing the public-RPC 403 the previous gotcha just fixed. Empty-array auto-discovery also lets you drop the `@solana/wallet-adapter-wallets` dep (and its `@walletconnect/*` / `pino-pretty` tail).
-- **Confirm against the blockhash DFlow signed with — never a fresh one.** The blockhash is on the deserialized transaction: `tx.message.recentBlockhash`. Pair it with `lastValidBlockHeight` from the `/order` response. **Never call `connection.getLatestBlockhash()` for confirmation.** It's wrong two ways: (1) semantically — a freshly-fetched blockhash can be past the `lastValidBlockHeight` DFlow returned, so `confirmTransaction` times out on a transaction that actually landed; (2) operationally — public `mainnet-beta` now 403s `getLatestBlockhash`, and `@solana/web3.js` surfaces that as `"failed to get recent blockhash: ..."`, which falsely looks like you're using the deprecated `getRecentBlockhash`. The right pattern is in the code sketch under the `/order` workflow above.
 - **`route_not_found` is often a units or mint mistake before it's a liquidity issue.** Before assuming no route exists, double-check you're passing atomic units (not human-readable amounts) and the mint addresses are correct.
 - **`price_impact_too_high` is real.** Trade size exceeds available liquidity; reduce `amount`, or pass `priceImpactTolerancePct` only with the user's explicit consent.
 - **Onchain failure with slippage logs.** Don't silently bump `slippageBps` on retry — surface to the user.
