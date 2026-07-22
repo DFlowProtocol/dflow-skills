@@ -25,7 +25,7 @@ If unclear, ask once: *"From the command line, or wired into an app?"*
 ### Quote (read-only)
 
 - CLI: `dflow quote <atomic-amount> <FROM> <TO>`
-- API: `GET /order` doubles as a quote — *including without a `userPublicKey`*, in which case it returns all price fields with no transaction attached. Use this for live-quote UIs before the user has connected a wallet. Don't reach for `/quote` separately; it's the older surface and the docs redirect back to `/order`. (Quote/response field list: load `/resources/trading-api/order/order` via the docs MCP.)
+- API: `GET /order` doubles as a quote — *including without a `userPublicKey`*, in which case it returns all price fields with no transaction attached. Use this for live-quote UIs before the user has connected a wallet. Don't reach for `/quote` separately; it still works but `/order` is the preferred surface for new integrations. (Quote/response field list: load `/resources/trading-api/order/order` via the docs MCP.)
 
 ### Trade — `/order`
 
