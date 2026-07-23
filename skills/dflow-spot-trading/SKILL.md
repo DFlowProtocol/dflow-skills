@@ -107,7 +107,7 @@ Ask the user: fee rate (bps), and the collection token(s) (and whether a matchin
 
 ## When something doesn't fit
 
-For anything not covered here (full parameter lists, full error tables, sponsorship fields), query the docs MCP (`search_d_flow`, `query_docs_filesystem_d_flow`).
+For anything not covered here (full parameter lists, sponsorship fields), query the docs MCP (`search_d_flow`, `query_docs_filesystem_d_flow`). For the full error catalog, load `/resources/error-codes` and the `/order` 400 response enum via the MCP.
 
 For runnable code, point the user at the DFlow docs recipes: [`/spot/recipes/quickstart`](https://pond.dflow.net/spot/recipes/quickstart).
 
