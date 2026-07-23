@@ -5,18 +5,18 @@ description: Swap any pair of Solana tokens via DFlow. Use when the user wants t
 
 # DFlow Spot Trading
 
-Swap any pair of Solana tokens via DFlow. Trades settle synchronously in one transaction via `/order`.
+Swap any pair of Solana tokens via DFlow. Trades are synchronous: one `/order` call returns a signed-ready transaction that you sign, submit, and confirm.
 
 ## Prerequisites
 
-- **DFlow docs MCP** (`https://pond.dflow.net/mcp`) — install per the [repo README](../../README.md#recommended-install-the-dflow-docs-mcp). This skill is the recipe; the MCP is the reference. Look up endpoint shapes, parameter details, error codes, and anything else field-level via `search_d_flow` / `query_docs_filesystem_d_flow` — don't guess.
-  - **Convention:** a bare doc path in this skill (e.g. `/resources/trading-api/order/order`) is an **MCP path** — read it with `query_docs_filesystem_d_flow` (`cat`/`head` the `.mdx`) or `search_d_flow`, *not* a browser fetch. Full `https://` links point to human-facing destinations (runnable recipes → Cookbook repo, the API-key signup) — those you hand to the user.
-- **`dflow` CLI** (optional, for command-line/agent use) — install per the [repo README](../../README.md#recommended-install-the-dflow-cli).
+- **DFlow docs MCP** (`https://pond.dflow.net/mcp`): install per the [repo README](../../README.md#recommended-install-the-dflow-docs-mcp). This skill is the recipe; the MCP is the reference. Look up endpoint shapes, parameter details, and error codes there rather than guessing.
+  - Convention: a bare doc path in this skill (e.g. `/resources/trading-api/order/order`) is an MCP path. Read it with `query_docs_filesystem_d_flow` (`cat`/`head` the `.mdx`) or `search_d_flow`, not a browser fetch. Full `https://` links are human-facing destinations (runnable recipes, the API-key signup) that you hand to the user.
+- **`dflow` CLI** (optional, for command-line/agent use): install per the [repo README](../../README.md#recommended-install-the-dflow-cli).
 
 ## Choose your surface
 
-- **CLI** — command line, scripts, local agents. Manages keys, signs, broadcasts.
-- **API** — web/mobile apps, backends, automations with their own wallet/signer. Browser apps must proxy HTTP through their backend (the Trading API serves no CORS).
+- **CLI**: command line, scripts, local agents. Manages keys, signs, and broadcasts.
+- **API**: web/mobile apps, backends, automations with their own signer. Browser apps must proxy HTTP through their backend (the Trading API serves no CORS).
 
 If unclear, ask once: *"From the command line, or wired into an app?"*
 
@@ -25,100 +25,94 @@ If unclear, ask once: *"From the command line, or wired into an app?"*
 ### Quote (read-only)
 
 - CLI: `dflow quote <atomic-amount> <FROM> <TO>`
-- API: `GET /order` doubles as a quote — *including without a `userPublicKey`*, in which case it returns all price fields with no transaction attached. Use this for live-quote UIs before the user has connected a wallet. Don't reach for `/quote` separately; it still works but `/order` is the preferred surface for new integrations. (Quote/response field list: load `/resources/trading-api/order/order` via the docs MCP.)
+- API: `GET /order` doubles as a quote. Called without a `userPublicKey`, it returns the price fields with no transaction attached, which is what you want for a quote before the user has connected a wallet. `/quote` still works, but `/order` is the preferred surface for new integrations. (Quote/response field list: load `/resources/trading-api/order/order` via the docs MCP.)
 
-### Trade — `/order`
+### Trade (`/order`)
 
-Single round-trip: get a quote and a signed-ready `VersionedTransaction` together; sign, submit, confirm. Fully synchronous. Works with **all** SPL + Token-2022 mints.
+Get a quote and a signed-ready `VersionedTransaction` in one call, then sign, submit, and confirm. Works with all SPL and Token-2022 mints.
 
-> Full request/response schema, every param, and the error codes: load `/resources/trading-api/order/order` via the docs MCP (`query_docs_filesystem_d_flow`) — don't guess field names.
+> Full request/response schema, every param, and the error codes: load `/resources/trading-api/order/order` via the docs MCP (`query_docs_filesystem_d_flow`).
 
 - CLI: `dflow trade <atomic-amount> <FROM> <TO>` (add `--confirm` for agents/scripts that need to block until confirmed).
-- API: `GET /order?userPublicKey=&inputMint=&outputMint=&amount=`, deserialize `transaction` (base64) → `VersionedTransaction`, sign + broadcast, then confirm. **Two broadcast idioms — pick the one that matches your context:**
-  - **Browser wallet-adapter app (the default for UIs).** `const sig = await wallet.sendTransaction(tx, connection)`. The wallet signs *and* broadcasts through its own RPC — your `connection` only needs to serve reads (`confirmTransaction`).
-  - **Node script / server-side signing with a `Keypair`.** Two-step: `tx.sign([keypair])` → `connection.sendRawTransaction(tx.serialize())`. Your RPC is what broadcasts; a public endpoint will 403.
-
-  **The full browser-adapter happy path, end to end:**
+- API: `GET /order?userPublicKey=&inputMint=&outputMint=&amount=`, deserialize the base64 `transaction` into a `VersionedTransaction`, sign it, submit it through your RPC, and confirm. The DFlow quickstart pattern:
 
 ```ts
 const { transaction } = await fetch("/api/order?...").then(r => r.json());
 const tx = VersionedTransaction.deserialize(Buffer.from(transaction, "base64"));
-const sig = await sendTransaction(tx, connection);          // wallet's RPC
-const { value } = await connection.confirmTransaction(sig, "confirmed");  // app's RPC (reads only)
+tx.sign([keypair]);
+const sig = await connection.sendTransaction(tx);
+const { value } = await connection.confirmTransaction(sig, "confirmed");
 if (value.err) throw new Error(`swap failed: ${JSON.stringify(value.err)}`);
 ```
 
-  **Where each `/order` response field goes** (don't re-derive these locally — DFlow owns the authoritative value):
+**Where each `/order` response field goes** (DFlow owns the authoritative value, so display these rather than re-deriving them):
 
-  - `transaction` (base64) → `VersionedTransaction.deserialize` → `wallet.sendTransaction` (browser) or `connection.sendRawTransaction` (Node).
-  - `lastValidBlockHeight` → available if you use the object form of `connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight })`; the DFlow quickstart just confirms by signature (`confirmTransaction(sig, "confirmed")`).
-  - `inAmount` / `outAmount` / `otherAmountThreshold` / `priceImpactPct` / `slippageBps` → display.
-  - `prioritizationFeeLamports` / `prioritizationType` → echo / logging. The server-resolved priority-fee choice after `"auto"` resolution.
-  - `contextSlot` → logging / staleness checks.
-  - `routePlan` → optional display / debugging.
+- `transaction` (base64): deserialize, sign, submit.
+- `inAmount` / `outAmount` / `otherAmountThreshold` / `priceImpactPct` / `slippageBps`: display.
+- `prioritizationFeeLamports` / `prioritizationType`: the server-resolved priority-fee choice after `"auto"` resolution; echo or log.
+- `contextSlot`: logging / staleness checks.
+- `routePlan`: optional display / debugging.
 
-  Fields marked *"Specified if and only if the request included the user's public key"* in the OpenAPI (`transaction`, `lastValidBlockHeight`, `computeUnitLimit`, `prioritizationFeeLamports`, `addressLookupTables`) are absent on quote-only calls — check before using.
+Fields marked *"Specified if and only if the request included the user's public key"* in the schema (`transaction`, `lastValidBlockHeight`, `computeUnitLimit`, `prioritizationFeeLamports`) are absent on quote-only calls, so check before using them.
 
-  Full runnable example (server-side `Keypair` variant): [`/spot/recipes/quickstart`](https://pond.dflow.net/spot/recipes/quickstart) (links to the DFlow Cookbook Repo). Field-level schema: load `/resources/trading-api/order/order` via the docs MCP.
+Full runnable example: [`/spot/recipes/quickstart`](https://pond.dflow.net/spot/recipes/quickstart). Field-level schema: load `/resources/trading-api/order/order` via the docs MCP.
 
 ## What to ASK the user (and what NOT to ask)
 
-**Trade shape — infer if unambiguous, confirm if not:**
+**Trade shape (infer if unambiguous, confirm if not):**
 
-1. **Input + output token** — base58 mint addresses. The CLI resolves a small symbol set (SOL, USDC, USDT, JUP, BONK, etc.); **the API has no symbol resolver** — base58 mints only.
-2. **Amount in atomic units of the input token** — `500_000` = $0.50 USDC, `1_000_000_000` = 1 SOL. Convert before calling.
+1. Input and output token as base58 mint addresses. The CLI resolves a small symbol set (SOL, USDC, USDT, JUP, BONK, and a few others); the API has no symbol resolver and accepts base58 mints only.
+2. Amount in atomic units of the input token (`500000` = $0.50 USDC, `1000000000` = 1 SOL). Convert before calling.
 
-**Infra — always ask, never infer:**
+**Infra (always ask, never infer):**
 
-3. **API only — wallet pubkey** (base58). Required for every `/order` call.
-4. **API only — DFlow API key** (only when the script is making direct HTTP calls to `/order` or `/quote`; pure CLI scripts don't need one — see the "two auth paths" gotcha). **Ask with a clean, neutral question: *"Do you have a DFlow API key?"*** Don't presuppose where the key lives — phrasings like *"do you have it in env?"* or *"is `DFLOW_API_KEY` set?"* nudge the user toward env-var defaults they didn't ask for. Surface the choice; don't silently fall back to env or to dev. It's **one key for everything DFlow** — same `x-api-key` unlocks the Trade API *and* the Metadata API, REST *and* WebSocket. If yes → prod host `https://quote-api.dflow.net` with `x-api-key` on every request. If no → dev host `https://dev-quote-api.dflow.net` (same features, rate-limited). Point them at `https://pond.dflow.net/get-started/api-key` for a prod key. **When you generate a script that does its own HTTP, log the resolved host + key-presence at startup** so the user can see which rails they're on.
-5. **Priority fee (both surfaces)** — "Any priority-fee preference, or just use DFlow's default?" Default on both surfaces = DFlow-auto, capped at 0.005 SOL (documented default on `/order`). Surface this explicitly so the user knows the lever exists for congestion / cost-sensitive trades. Don't editorialize about what percentage of trades this covers — DFlow doesn't publish one and you don't know.
-   - **API** — pass `prioritizationFeeLamports` on `/order`: `auto` | `medium` | `high` | `veryHigh` | `disabled` | integer lamports. Live estimates for tuning: `GET /priority-fees` (snapshot), `/priority-fees/stream` (WebSocket). Fee modes + the auto-cap: load `/spot/trading/priority-fees` via the docs MCP.
-   - **CLI** — no tuning flag; `dflow trade` always uses the server-side default. If the user needs finer control (an exact lamport value, or `disabled`), they'll have to drop to the API.
-6. **Sponsored / gasless (API only — skip for CLI)** — "Does the user need to hold SOL for this trade, or is your app covering fees?" Default = user pays. To sponsor, pass `sponsor=<sponsor-wallet-base58>` on `/order` and co-sign the returned transaction with the sponsor keypair (both user and sponsor sign). Optional `sponsorExec=true|false` picks sponsor-executes (default) vs. user-executes. Full `sponsor` / `sponsorExec` semantics: load `/resources/trading-api/order/order` via the docs MCP. The CLI doesn't support sponsorship at all.
+3. API only: wallet pubkey (base58), required for every `/order` call that returns a transaction.
+4. API only: DFlow API key. Ask with a clean, neutral question: *"Do you have a DFlow API key?"* Don't presuppose where the key lives; phrasings like *"is `DFLOW_API_KEY` set?"* nudge the user toward env-var defaults they didn't ask for. It's one key for everything DFlow (the same `x-api-key` works across the REST APIs and the WebSocket streams). If yes, use prod host `https://quote-api.dflow.net` with `x-api-key` on every request. If no, use dev host `https://dev-quote-api.dflow.net` (same features, rate-limited, for testing only). Point them at `https://pond.dflow.net/get-started/api-key` for a prod key. The `dflow` CLI also requires a key, set once via `dflow setup`.
+5. Priority fee (both surfaces): *"Any priority-fee preference, or just use DFlow's default?"* Default on both surfaces is DFlow-auto, capped at 0.005 SOL (documented default on `/order`). Surface this so the user knows the lever exists for congestion or cost-sensitive trades. Don't editorialize about what percentage of trades this covers; DFlow doesn't publish one.
+   - API: pass `prioritizationFeeLamports` on `/order` as `auto`, `medium`, `high`, `veryHigh`, `disabled`, or integer lamports. Live estimates for tuning: `GET /priority-fees` (snapshot), `/priority-fees/stream` (WebSocket). Fee modes and the auto-cap: load `/spot/trading/priority-fees` via the docs MCP.
+   - CLI: no tuning flag; `dflow trade` always uses the server-side default. For finer control (an exact lamport value, or `disabled`), drop to the API.
+6. Sponsored / gasless (API only, skip for CLI): *"Does the user need to hold SOL for this trade, or is your app covering fees?"* Default is user pays. To sponsor, pass `sponsor=<sponsor-wallet-base58>` on `/order` and co-sign the returned transaction with the sponsor keypair (both user and sponsor sign). Optional `sponsorExec=true|false` picks sponsor-executes (default) vs. user-executes. Full semantics: load `/resources/trading-api/order/order` via the docs MCP. The CLI doesn't support sponsorship.
 
 **Do NOT ask about:**
 
-- **RPC** — CLI users set it during `dflow setup`. Browser wallet-adapter apps using `wallet.sendTransaction(tx, connection)` don't need their own RPC for the broadcast — the wallet handles it (see the broadcast-path Gotcha). Only ask when signing server-side (Node + `Keypair`) or when the app is explicitly going low-level with `connection.sendRawTransaction` in the browser. When one is needed, suggest [Helius](https://helius.dev).
-- **Slippage** — both surfaces default to `"auto"`. Override only on explicit user request (`--slippage` CLI; `slippageBps` API).
-- **DEX inclusion/exclusion, route length, Jito bundles, direct-only routes** — defaults are right for typical swaps; only surface these knobs on explicit user need.
-- **Platform fee** — off by default; only relevant if the user is monetizing their own distribution. See the **Platform fees** section below.
+- RPC: CLI users set it during `dflow setup`. For the API, ask only when the app signs server-side and needs its own RPC to submit. When one is needed, use a reliable RPC provider.
+- Slippage: both surfaces default to `"auto"`. Override only on explicit user request (`--slippage` CLI; `slippageBps` API).
+- DEX inclusion/exclusion, route length, Jito bundles, direct-only routes: defaults are right for typical swaps; surface these knobs only on explicit user need.
+- Platform fee: off by default; relevant only if the user is monetizing their own distribution. See the Platform fees section below.
 
 ## Gotchas (the docs MCP won't volunteer these)
 
-- **Atomic units always.** API rejects human-readable amounts. Confirm decimals each time — token metadata or RPC `getParsedAccountInfo`.
-- **API has no symbol resolver.** The CLI has a small allow-list; the API only accepts base58 mints. Don't assume `"USDC"` works on `/order`.
-- **Browser apps must proxy.** Trading API serves no CORS — call it from a backend (Next.js API route or equivalent), never directly from the browser.
-- **Two broadcast paths in browser apps; pick the right one.** In `@solana/wallet-adapter-react`, `wallet.sendTransaction(tx, connection)` delegates to the wallet's `signAndSendTransaction` — Phantom and most major wallets route the broadcast through their own RPC, so the app's `Connection` only needs to work for reads (`confirmTransaction`). A public `mainnet-beta` endpoint is fine for that. The low-level two-step (`signTransaction(tx)` + `connection.sendRawTransaction(signed.serialize())`) sends through *the app's* RPC — and public endpoints reliably 403 on `sendTransaction`. **Default to `wallet.sendTransaction` in browser apps**; drop to the two-step only when you need to inspect or modify the signed bytes before broadcast. Server-side signing (Node + `Keypair`) is always two-step, because there's no wallet adapter to delegate to — and there you do need a real RPC.
-- **Wire wallets via Wallet Standard auto-discovery, not per-wallet adapters.** Pass `wallets={[]}` to `<WalletProvider>`. Modern Phantom / Solflare / Backpack / Glow / etc. implement the Wallet Standard protocol and are auto-detected at runtime — no explicit adapter instances needed. **Do not** instantiate `new PhantomWalletAdapter()` / `new SolflareWalletAdapter()` from `@solana/wallet-adapter-wallets`; those are pre-Wallet-Standard shims, and the kicker is the `useWallet()` React surface looks identical either way — same `sendTransaction`, same `publicKey`. But underneath, the legacy adapter's `sendTransaction` silently downgrades to `signTransaction` + `connection.sendRawTransaction` through *your* app's RPC, re-introducing the public-RPC 403 the previous gotcha just fixed. Empty-array auto-discovery also lets you drop the `@solana/wallet-adapter-wallets` dep (and its `@walletconnect/*` / `pino-pretty` tail).
-- **`route_not_found` is often a units or mint mistake before it's a liquidity issue.** Before assuming no route exists, double-check you're passing atomic units (not human-readable amounts) and the mint addresses are correct.
+- **Atomic units always.** The API rejects human-readable amounts. Confirm decimals each time (token metadata or RPC `getParsedAccountInfo`).
+- **API has no symbol resolver.** `inputMint` and `outputMint` take base58 mint addresses only, so a symbol like `"USDC"` won't work on `/order`. (The CLI resolves a small symbol set; the API does not.)
+- **Browser apps must proxy.** The Trading API serves no CORS, so call it from a backend (an edge function or API route), never directly from the browser.
+- **`route_not_found`.** A likely cause is insufficient liquidity for the pair at your trade size. It's also worth confirming the mint addresses are correct and that `amount` is in atomic units.
 - **`price_impact_too_high` is real.** Trade size exceeds available liquidity; reduce `amount`, or pass `priceImpactTolerancePct` only with the user's explicit consent.
-- **Onchain failure with slippage logs.** Don't silently bump `slippageBps` on retry — surface to the user.
-- **CLI shell-outs authenticate themselves; direct HTTP calls don't.** If your script or backend shells out to `dflow trade`, that leg uses the CLI's stored config from `dflow setup` (key, wallet, RPC) — **you plumb nothing** for CLI invocations. If the same script *also* hits the Trade API or Metadata API directly over HTTP (e.g. scanner-style discovery, your own `/order` call, `/quote`), that HTTP client needs the key handed in explicitly (env var, `.env`, `--api-key` flag, header). The CLI's stored key is not reusable by a sibling HTTP client, and an env-var key is not injected into the CLI either — they're independent plumbing sites for the same DFlow key. **Only ask about an API key for the HTTP portion; pure CLI scripts don't need one.**
+- **Onchain failure with slippage logs.** Don't silently bump `slippageBps` on retry; surface it to the user.
+- **CLI and direct HTTP are separate auth sites.** The CLI stores its key, wallet, and RPC at `dflow setup`, so shelling out to `dflow trade` plumbs nothing extra. A sibling HTTP client that calls `/order` directly needs its own key handed in (env var, `.env`, header); the CLI's stored key is not reused by it. Both need a key; they're just configured in different places.
 
 ## Platform fees (builder cut)
 
-Collect a fee on swaps your app routes, paid to a **builder-controlled token account** on successful execution. This is the builder→user monetization lever. **API only** — these are `/order` params; the `dflow` CLI has no platform-fee flags, so don't hunt for one.
+Collect a fee on swaps your app routes, paid to a builder-controlled token account on successful execution. API only: these are `/order` params; the `dflow` CLI has no platform-fee flags.
 
-- `platformFeeBps` — flat fee in basis points (`50` = 0.5%).
-- `platformFeeMode` — which side pays: `outputMint` (default) or `inputMint`.
-- `feeAccount` — the SPL token account that receives the fee. **Must already exist** (DFlow won't create it); you need **one ATA per token you collect in**, owned by the builder wallet. Pass the one matching the mode's token per request.
+- `platformFeeBps`: flat fee in basis points (`50` = 0.5%).
+- `platformFeeMode`: which side pays, `outputMint` (default) or `inputMint`.
+- `feeAccount`: the SPL token account that receives the fee. It must already exist (DFlow won't create it); you need one ATA per token you collect in, owned by the builder wallet. Pass the one matching the mode's token per request.
 
 Gotchas:
 
-- **Don't set `platformFeeBps` unless you're actually collecting.** A declared fee is factored into the slippage budget; a phantom fee (no real `feeAccount` behind it) spends that budget on nothing and worsens the user's price. Only pass a nonzero value with a real fee account at the other end.
-- **Fees apply only on successful trades** — failed/reverted swaps charge nothing. Don't count failures as fee-bearing volume.
+- **Don't set `platformFeeBps` unless you're actually collecting.** A declared fee is factored into the slippage budget, so a fee with no real `feeAccount` behind it spends that budget on nothing and worsens the user's price.
+- **Fees apply only on successful trades.** Failed or reverted swaps charge nothing.
 
-Ask the user: fee **rate** (bps), collection **token(s)** (and whether a matching builder-owned ATA already exists). For the full mode matrix and encoding, **load `/spot/trading/platform-fees` now** (docs MCP); runnable example: [`/spot/recipes/platform-fees`](https://pond.dflow.net/spot/recipes/platform-fees).
+Ask the user: fee rate (bps), and the collection token(s) (and whether a matching builder-owned ATA already exists). For the full mode matrix, load `/spot/trading/platform-fees` via the docs MCP; runnable example: [`/spot/recipes/platform-fees`](https://pond.dflow.net/spot/recipes/platform-fees).
 
 ## When something doesn't fit
 
-For anything not covered above — full parameter lists, full error tables, legacy `/quote` + `/swap` flow, sponsorship fields, new features — query the docs MCP (`search_d_flow`, `query_docs_filesystem_d_flow`). Don't guess.
+For anything not covered here (full parameter lists, full error tables, sponsorship fields), query the docs MCP (`search_d_flow`, `query_docs_filesystem_d_flow`).
 
-For runnable code, point the user at the **DFlow docs recipes** (each links to the DFlow Cookbook Repo for clone-and-go): [`/spot/recipes/quickstart`](https://pond.dflow.net/spot/recipes/quickstart).
+For runnable code, point the user at the DFlow docs recipes: [`/spot/recipes/quickstart`](https://pond.dflow.net/spot/recipes/quickstart).
 
 ## Sibling skills
 
 Defer if the user pivots to:
 
-- `dflow-market-data` — stream live prices / order book / depth. Read-only market data; **this skill executes trades, that one displays them.** A "show me the live book / prices" ask belongs there.
+- `dflow-market-data`: stream live prices, order book, or depth. Read-only market data; this skill executes trades, that one displays them. A "show me the live book / prices" ask belongs there.
