@@ -1,6 +1,6 @@
 # DFlow Skills
 
-A collection of [Claude Code Skills](https://docs.claude.com/en/docs/claude-code/skills) for working with [DFlow](https://dflow.net) — Solana spot trading and adjacent monetization / fee / sponsorship surfaces.
+A collection of [Claude Code Skills](https://docs.claude.com/en/docs/claude-code/skills) for working with [DFlow](https://dflow.net) — Solana spot trading, Proof identity verification, and adjacent monetization / fee / sponsorship surfaces.
 
 Each skill is a focused recipe, a single `SKILL.md` that captures the workflow, decisions, and gotchas an agent needs to use DFlow well. The skills are deliberately light: for endpoint shapes, parameter details, and error codes they defer to the **DFlow docs MCP**, and for runnable code examples they point at the **DFlow docs recipes pages** under each product (e.g., `https://pond.dflow.net/spot/recipes/quickstart`). Each recipe page links to the DFlow Cookbook Repo for clone-and-go usage.
 
@@ -19,6 +19,7 @@ The `skills` [CLI](https://github.com/vercel-labs/skills) is interactive, it det
 | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | [`dflow-spot-trading`](skills/dflow-spot-trading/SKILL.md)                   | Swap any pair of Solana tokens via DFlow CLI or Trading API (incl. builder platform fees). |
 | [`dflow-market-data`](skills/dflow-market-data/SKILL.md)                     | Stream live quotes, order-book depth, and priority fees over WebSocket.                 |
+| [`dflow-proof-kyc`](skills/dflow-proof-kyc/SKILL.md)                         | Integrate Proof identity verification to gate your app's features behind KYC.           |
 
 
 ## Recommended: install the DFlow docs MCP
@@ -99,6 +100,7 @@ Honest disclosure, since the `npx skills` install flow flags the trading skills 
 skills/
   dflow-spot-trading/SKILL.md
   dflow-market-data/SKILL.md
+  dflow-proof-kyc/SKILL.md
   ... (one folder per skill, each just a SKILL.md)
 ```
 
