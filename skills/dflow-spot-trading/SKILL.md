@@ -29,25 +29,31 @@ If unclear, ask once: *"From the command line, or wired into an app?"*
 
 ### Trade (`/order`)
 
-Get a quote and a signed-ready `VersionedTransaction` in one call, then sign, submit, and confirm. Works with all SPL and Token-2022 mints.
+Get a quote and a signed-ready transaction in one call, then sign, submit, and confirm. Works with all SPL and Token-2022 mints.
 
 > Full request/response schema, every param, and the error codes: load `/resources/trading-api/order/order` via the docs MCP (`query_docs_filesystem_d_flow`).
 
 - CLI: `dflow trade <atomic-amount> <FROM> <TO>` (add `--confirm` for agents/scripts that need to block until confirmed).
-- API: `GET /order?userPublicKey=&inputMint=&outputMint=&amount=`, deserialize the base64 `transaction` into a `VersionedTransaction`, sign it, submit it through your RPC, and confirm. The DFlow quickstart pattern:
+- API: `GET /order?userPublicKey=&inputMint=&outputMint=&amount=&transactionVersion=v1`, decode the base64 `transaction`, sign it, submit it through your RPC, and confirm. Requires `@solana/kit` (>=8.0.0) to build, sign, and send the transaction. The DFlow quickstart pattern:
 
 ```ts
-const { transaction } = await fetch("/api/order?...").then(r => r.json());
-const tx = VersionedTransaction.deserialize(Buffer.from(transaction, "base64"));
-tx.sign([keypair]);
-const sig = await connection.sendTransaction(tx);
-const { value } = await connection.confirmTransaction(sig, "confirmed");
-if (value.err) throw new Error(`swap failed: ${JSON.stringify(value.err)}`);
+const params = new URLSearchParams({
+  userPublicKey, inputMint, outputMint, amount,
+  transactionVersion: "v1",
+});
+const { transaction } = await fetch(`/api/order?${params}`).then(r => r.json());
+
+const tx = getTransactionDecoder().decode(getBase64Encoder().encode(transaction));
+const signed = await signTransaction([keypair], tx);
+const wireTx = getBase64EncodedWireTransaction(signed);
+
+const sig = await rpc.sendTransaction(wireTx, { encoding: "base64" }).send();
+// Poll getSignatureStatuses (or your framework's confirm helper) before treating the trade as landed.
 ```
 
 **Where each `/order` response field goes** (DFlow owns the authoritative value, so display these rather than re-deriving them):
 
-- `transaction` (base64): deserialize, sign, submit.
+- `transaction` (base64): decode, sign, submit.
 - `inAmount` / `outAmount` / `otherAmountThreshold` / `priceImpactPct` / `slippageBps`: display.
 - `prioritizationFeeLamports` / `prioritizationType`: the server-resolved priority-fee choice after `"auto"` resolution; echo or log.
 - `contextSlot`: logging / staleness checks.
@@ -71,7 +77,7 @@ Full runnable example: [`/spot/recipes/quickstart`](https://pond.dflow.net/spot/
 5. Priority fee (both surfaces): *"Any priority-fee preference, or just use DFlow's default?"* Default on both surfaces is DFlow-auto, capped at 0.005 SOL (documented default on `/order`). Surface this so the user knows the lever exists for congestion or cost-sensitive trades. Don't editorialize about what percentage of trades this covers; DFlow doesn't publish one.
    - API: pass `prioritizationFeeLamports` on `/order` as `auto`, `medium`, `high`, `veryHigh`, `disabled`, or integer lamports. Live estimates for tuning: `GET /priority-fees` (snapshot), `/priority-fees/stream` (WebSocket). Fee modes and the auto-cap: load `/spot/trading/priority-fees` via the docs MCP.
    - CLI: no tuning flag; `dflow trade` always uses the server-side default. For finer control (an exact lamport value, or `disabled`), drop to the API.
-6. Sponsored / gasless (API only, skip for CLI): *"Does the user need to hold SOL for this trade, or is your app covering fees?"* Default is user pays. To sponsor, pass `sponsor=<sponsor-wallet-base58>` on `/order` and co-sign the returned transaction with the sponsor keypair (both user and sponsor sign). Optional `sponsorExec=true|false` picks sponsor-executes (default) vs. user-executes. Full semantics: load `/resources/trading-api/order/order` via the docs MCP. The CLI doesn't support sponsorship.
+6. Sponsored / gasless (API only, skip for CLI): *"Does the user need to hold SOL for this trade, or is your app covering fees?"* Default is user pays. To sponsor, pass `sponsor=<sponsor-wallet-base58>` on `/order` and co-sign the returned transaction with the sponsor keypair: `signTransaction([userKeypair, sponsorKeypair], tx)` (both user and sponsor sign). Optional `sponsorExec=true|false` picks sponsor-executes (default) vs. user-executes. Full semantics: load `/resources/trading-api/order/order` via the docs MCP. The CLI doesn't support sponsorship.
 
 **Do NOT ask about:**
 
@@ -82,6 +88,7 @@ Full runnable example: [`/spot/recipes/quickstart`](https://pond.dflow.net/spot/
 
 ## Gotchas (the docs MCP won't volunteer these)
 
+- **Transaction format.** Each `/order` (and `/quote`) call builds a 4096-byte transaction with account addresses inlined (no address lookup tables) and rejects duplicate addresses; the 64-account limit still applies. Build, sign, and send it with `@solana/kit` (>=8.0.0) — classic `@solana/web3.js` can decode it back for display but can't build, sign, or send it.
 - **Atomic units always.** The API rejects human-readable amounts. Confirm decimals each time (token metadata or RPC `getParsedAccountInfo`).
 - **API has no symbol resolver.** `inputMint` and `outputMint` take base58 mint addresses only, so a symbol like `"USDC"` won't work on `/order`. (The CLI resolves a small symbol set; the API does not.)
 - **Browser apps must proxy.** The Trading API serves no CORS, so call it from a backend (an edge function or API route), never directly from the browser.
