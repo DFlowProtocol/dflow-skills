@@ -17,7 +17,7 @@ The `skills` [CLI](https://github.com/vercel-labs/skills) is interactive, it det
 
 | Skill                                                               | What it does                                                                           |
 | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| [`dflow-spot-trading`](skills/dflow-spot-trading/SKILL.md)                   | Swap any pair of Solana tokens via DFlow CLI or Trading API (incl. builder platform fees). |
+| [`dflow-spot-trading`](skills/dflow-spot-trading/SKILL.md)                   | Swap any pair of Solana tokens via DFlow CLI or Trading API (incl. builder platform fees). Builds Solana v1 transactions; the API path signs and sends with `@solana/kit` (>=8.0.0). |
 | [`dflow-market-data`](skills/dflow-market-data/SKILL.md)                     | Stream live quotes, order-book depth, and priority fees over WebSocket.                 |
 | [`dflow-proof-kyc`](skills/dflow-proof-kyc/SKILL.md)                         | Integrate Proof identity verification to gate your app's features behind KYC.           |
 
