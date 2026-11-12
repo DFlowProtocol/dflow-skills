@@ -1,8 +1,15 @@
 # DFlow Skills
 
-A collection of [Claude Code Skills](https://docs.claude.com/en/docs/claude-code/skills) for working with [DFlow](https://dflow.net) — Solana spot trading, Proof identity verification, and adjacent monetization / fee / sponsorship surfaces.
+Agent skills for building on [DFlow](https://dflow.net), the trading infrastructure for Solana. Each skill is a `SKILL.md` that gives a coding agent the journey, the decisions to raise with the developer, and a working example. Parameters, response fields, and error codes stay in the [DFlow docs](https://pond.dflow.net), which agents read through the docs MCP.
 
-Each skill is a focused recipe, a single `SKILL.md` that captures the workflow, decisions, and gotchas an agent needs to use DFlow well. The skills are deliberately light: for endpoint shapes, parameter details, and error codes they defer to the **DFlow docs MCP**, and for runnable code examples they point at the **DFlow docs recipes pages** under each product (e.g., `https://pond.dflow.net/spot/recipes/quickstart`). Each recipe page links to the DFlow Cookbook Repo for clone-and-go usage.
+## Skills
+
+| Skill | Use when |
+| --- | --- |
+| [`dflow-crypto-trading`](skills/dflow-crypto-trading/SKILL.md) | Swapping one SPL token for another through the Trading API: `/order` requests, signing, sending, and confirming. |
+| [`dflow-equities-trading`](skills/dflow-equities-trading/SKILL.md) | Buying or selling tokenized equities: mint lookup, sync and async orders, the submit endpoint, and tracking async orders. |
+| [`dflow-crypto-market-data`](skills/dflow-crypto-market-data/SKILL.md) | Building live price displays or order book depth from the quote and book WebSocket streams. |
+| [`dflow-sponsored-swaps`](skills/dflow-sponsored-swaps/SKILL.md) | Building gasless swaps where a sponsor wallet pays transaction fees and token account creation costs. |
 
 ## Install
 
@@ -10,97 +17,28 @@ Each skill is a focused recipe, a single `SKILL.md` that captures the workflow, 
 npx skills add DFlowProtocol/dflow-skills
 ```
 
-The `skills` [CLI](https://github.com/vercel-labs/skills) is interactive, it detects your agents, lets you pick which skills and which agents to install to, and asks whether you want project or global scope.
+The `skills` [CLI](https://github.com/vercel-labs/skills) detects your agents and lets you pick which skills and agents to install to. Skills install to the current project by default. Add `-g` to install them globally.
 
-## Skills
+Update installed skills with `npx skills update`, and list them with `npx skills list`.
 
+## Install the DFlow docs MCP
 
-| Skill                                                               | What it does                                                                           |
-| ------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| [`dflow-spot-trading`](skills/dflow-spot-trading/SKILL.md)                   | Swap any pair of Solana tokens via DFlow CLI or Trading API (incl. builder platform fees). Builds Solana v1 transactions; the API path signs and sends with `@solana/kit` (>=8.0.0). |
-| [`dflow-market-data`](skills/dflow-market-data/SKILL.md)                     | Stream live quotes, order-book depth, and priority fees over WebSocket.                 |
-| [`dflow-proof-kyc`](skills/dflow-proof-kyc/SKILL.md)                         | Integrate Proof identity verification to gate your app's features behind KYC.           |
+The skills point agents to the DFlow docs MCP for reference material. Connect it so an agent can look up exact parameters and error codes.
 
-
-## Recommended: install the DFlow docs MCP
-
-Every skill tells the agent to query the DFlow docs MCP for anything reference-y. The skills are deliberately the *recipe* (workflow ordering, gates, defaults, gotchas); the MCP is the *reference* (every parameter, every endpoint, every error code). The skills work without it but the agent will guess on field-level questions; with it, the agent can look things up canonically.
-
-Server URL: `https://pond.dflow.net/mcp`
-
-### Cursor
-
-Add to `.cursor/mcp.json` (workspace) or `~/.cursor/mcp.json` (global):
-
-```json
-{
-  "mcpServers": {
-    "DFlow": {
-      "url": "https://pond.dflow.net/mcp"
-    }
-  }
-}
+```
+https://pond.dflow.net/mcp
 ```
 
-### Claude Code CLI
+For Claude Code:
 
 ```bash
 claude mcp add --transport http DFlow https://pond.dflow.net/mcp
 ```
 
-### Claude Desktop
+[MCP Server](https://pond.dflow.net/ai/mcp) has setup steps for Claude, Cursor, VS Code, and Windsurf. Without the MCP, agents start from [llms.txt](https://pond.dflow.net/llms.txt).
 
-Add to `claude_desktop_config.json`:
+## Conventions
 
-```json
-{
-  "mcpServers": {
-    "DFlow": {
-      "url": "https://pond.dflow.net/mcp"
-    }
-  }
-}
-```
-
-### Claude.ai (web)
-
-Add it as a Connector under Settings → Connectors using the URL above.
-
-## Recommended: install the `dflow` CLI
-
-Skills that cover the CLI surface (spot trading, etc.) assume `dflow` is available on `PATH`. If it isn't, the skill will tell the agent to install it:
-
-```bash
-curl -fsS https://cli.dflow.net | sh
-dflow setup
-```
-
-Prefer to inspect before executing? Split the install into two steps:
-
-```bash
-curl -fsSL https://cli.dflow.net -o dflow-install.sh
-less dflow-install.sh     # audit, then:
-sh dflow-install.sh
-```
-
-`dflow setup` is interactive — it asks for a wallet, passphrase, and Solana RPC URL. After that, every skill that touches the CLI just works.
-
-## Security
-
-Honest disclosure, since the `npx skills` install flow flags the trading skills as "HIGH-RISK" (Socket correctly notes they're "purpose-aligned" and "not overtly malicious," but describes the capability surface accurately):
-
-- **What these skills are.** Plain markdown with YAML frontmatter. They don't execute at install time, at skill-load time, or at all — they're instructions that load into an agent's context window when the agent decides they're relevant.
-- **What they enable.** An AI agent reading these skills can execute real-money Solana trades on behalf of the wallet you've configured (CLI: your passphrase-protected vault; API: the wallet adapter your app wires up). Treat that capability like an API-key scope — don't grant access to an agent you wouldn't trust with a terminal session.
-- **Authorization stays at the wallet, not the agent.** CLI trades sign through [Open Wallet Standard](https://openwallet.foundation/) — keys live encrypted in a local vault and never enter the agent's context. API trades sign through whichever wallet adapter the app uses (Phantom, Privy, Turnkey, etc.). The agent constructs the request; the wallet signs it.
-- **The docs MCP is read-only.** `https://pond.dflow.net/mcp` serves DFlow documentation. No trade execution, no key handling. It's also optional — skills work without it (agents just guess more on field-level questions).
-
-## Repo layout
-
-```
-skills/
-  dflow-spot-trading/SKILL.md
-  dflow-market-data/SKILL.md
-  dflow-proof-kyc/SKILL.md
-  ... (one folder per skill, each just a SKILL.md)
-```
-
+- Code examples use `@solana/kit` 8.0.0 or later and request v1 transactions.
+- Examples default to the developer endpoints. Both developer and production endpoints run on mainnet with the same features. Developer endpoints need no API key and have lower rate limits.
+- Each skill lists the questions an agent should raise before it writes code.
